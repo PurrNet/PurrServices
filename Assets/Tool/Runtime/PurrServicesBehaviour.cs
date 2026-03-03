@@ -1,0 +1,122 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace PurrServices
+{
+    [AddComponentMenu("PurrNet/PurrServices")]
+    [DefaultExecutionOrder(-100)]
+    public class PurrServicesBehaviour : MonoBehaviour
+    {
+        [SerializeField] string _serverUrl = "https://purrnet.dev";
+        [SerializeField] string _apiKey;
+
+        static PurrServicesBehaviour _instance;
+
+        public static PurrServicesBehaviour instance
+        {
+            get
+            {
+                if (_instance != null)
+                    return _instance;
+
+                _instance = FindAnyObjectByType<PurrServicesBehaviour>();
+
+                if (_instance != null)
+                    return _instance;
+
+                var go = new GameObject("PurrServices");
+                _instance = go.AddComponent<PurrServicesBehaviour>();
+                DontDestroyOnLoad(go);
+
+                return _instance;
+            }
+        }
+
+        ServiceHttp _http;
+        AuthService _auth;
+        LobbyService _lobbies;
+
+        readonly List<LobbyConnection> _connections = new();
+
+        public AuthService auth => _auth;
+        public LobbyService lobbies => _lobbies;
+        public bool isAuthenticated => _auth != null && _auth.isAuthenticated;
+        public string sessionToken => _auth?.sessionToken;
+        public string playerId => _auth?.playerId;
+        public string playerName => _auth?.displayName;
+        public string serverUrl => _serverUrl;
+
+        string _activePlayerToken;
+
+        public string activePlayerToken
+        {
+            get => _activePlayerToken;
+            set => _activePlayerToken = value;
+        }
+
+        void Awake()
+        {
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            InitializeServices();
+        }
+
+        void InitializeServices()
+        {
+            _http = new ServiceHttp(
+                () => _serverUrl,
+                () => _apiKey,
+                () => _auth?.sessionToken,
+                () => _activePlayerToken
+            );
+
+            _auth = new AuthService(_http);
+
+            _lobbies = new LobbyService(
+                _http,
+                () => _apiKey,
+                () => _auth?.sessionToken,
+                () => _serverUrl
+            );
+        }
+
+        void Update()
+        {
+            for (int i = _connections.Count - 1; i >= 0; i--)
+            {
+                _connections[i].Tick();
+            }
+        }
+
+        void OnDestroy()
+        {
+            for (int i = _connections.Count - 1; i >= 0; i--)
+            {
+                _connections[i].Dispose();
+            }
+
+            _connections.Clear();
+
+            if (_instance == this)
+                _instance = null;
+        }
+
+        internal void RegisterConnection(LobbyConnection connection)
+        {
+            if (!_connections.Contains(connection))
+                _connections.Add(connection);
+        }
+
+        internal void UnregisterConnection(LobbyConnection connection)
+        {
+            _connections.Remove(connection);
+        }
+    }
+}
