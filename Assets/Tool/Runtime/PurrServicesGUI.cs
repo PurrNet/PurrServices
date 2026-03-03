@@ -20,6 +20,8 @@ namespace PurrServices
         // --- Auth fields ---
         string _deviceId;
         string _displayName = "";
+        string _authUsername = "";
+        string _authPassword = "";
 
         // --- Lobby create fields ---
         string _createName = "";
@@ -156,6 +158,33 @@ namespace PurrServices
             GUILayout.EndHorizontal();
 
             GUILayout.Space(8);
+            GUILayout.Label("--- Username & Password ---");
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Username", GUILayout.Width(80));
+            _authUsername = GUILayout.TextField(_authUsername);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Password", GUILayout.Width(80));
+            _authPassword = GUILayout.PasswordField(_authPassword, '*');
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Register") && !_busy)
+                RunAsync(RegisterAsync());
+            if (GUILayout.Button("Login (Password)") && !_busy)
+                RunAsync(LoginWithPasswordAsync());
+            if (GUILayout.Button("Logout"))
+            {
+                auth.Logout();
+                Log("Logged out");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(8);
 
             if (auth != null)
             {
@@ -172,6 +201,29 @@ namespace PurrServices
             var displayName = string.IsNullOrWhiteSpace(_displayName) ? null : _displayName;
             Log($"Auth.LoginAsync(deviceId={Truncate(_deviceId, 12)}, name={displayName ?? "(null)"})");
             var r = await svc.auth.LoginAsync(_deviceId, displayName);
+            if (r.success)
+                Log($"Login OK — player={r.playerId}, name={r.displayName}");
+            else
+                LogError($"Login FAILED — {r.error}");
+        }
+
+        async Task RegisterAsync()
+        {
+            var svc = PurrServicesBehaviour.instance;
+            var displayName = string.IsNullOrWhiteSpace(_displayName) ? null : _displayName;
+            Log($"Auth.RegisterAsync(user={_authUsername}, name={displayName ?? "(null)"})");
+            var r = await svc.auth.RegisterAsync(_authUsername, _authPassword, displayName);
+            if (r.success)
+                Log($"Register OK — player={r.playerId}, name={r.displayName}");
+            else
+                LogError($"Register FAILED — {r.error}");
+        }
+
+        async Task LoginWithPasswordAsync()
+        {
+            var svc = PurrServicesBehaviour.instance;
+            Log($"Auth.LoginWithPasswordAsync(user={_authUsername})");
+            var r = await svc.auth.LoginWithPasswordAsync(_authUsername, _authPassword);
             if (r.success)
                 Log($"Login OK — player={r.playerId}, name={r.displayName}");
             else

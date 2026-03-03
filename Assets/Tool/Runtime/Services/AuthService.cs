@@ -36,6 +36,33 @@ namespace PurrServices
             return await LoginAsync("system-uuid", credentials);
         }
 
+        public async Task<AuthResult> RegisterAsync(string username, string password, string displayName = null)
+        {
+            var credentials = new Dictionary<string, string>
+            {
+                { "username", username },
+                { "password", password },
+                { "mode", "register" }
+            };
+
+            if (!string.IsNullOrEmpty(displayName))
+                credentials["displayName"] = displayName;
+
+            return await LoginAsync("username-password", credentials);
+        }
+
+        public async Task<AuthResult> LoginWithPasswordAsync(string username, string password)
+        {
+            var credentials = new Dictionary<string, string>
+            {
+                { "username", username },
+                { "password", password },
+                { "mode", "login" }
+            };
+
+            return await LoginAsync("username-password", credentials);
+        }
+
         public async Task<AuthResult> LoginAsync(string provider, Dictionary<string, string> credentials)
         {
             var request = new AuthRequest
