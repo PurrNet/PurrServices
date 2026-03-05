@@ -5,27 +5,27 @@ namespace PurrServices
 {
     [AddComponentMenu("PurrNet/PurrServices")]
     [DefaultExecutionOrder(-100)]
-    public class PurrServicesBehaviour : MonoBehaviour
+    public class PurrServices : MonoBehaviour
     {
         [SerializeField] string _serverUrl = "https://purrnet.dev";
         [SerializeField] string _apiKey;
 
-        static PurrServicesBehaviour _instance;
+        static PurrServices _instance;
 
-        public static PurrServicesBehaviour instance
+        public static PurrServices instance
         {
             get
             {
                 if (_instance != null)
                     return _instance;
 
-                _instance = FindAnyObjectByType<PurrServicesBehaviour>();
+                _instance = FindAnyObjectByType<PurrServices>();
 
                 if (_instance != null)
                     return _instance;
 
                 var go = new GameObject("PurrServices");
-                _instance = go.AddComponent<PurrServicesBehaviour>();
+                _instance = go.AddComponent<PurrServices>();
                 DontDestroyOnLoad(go);
 
                 return _instance;

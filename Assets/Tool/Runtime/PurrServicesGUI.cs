@@ -130,7 +130,7 @@ namespace PurrServices
 
         void DrawAuthTab()
         {
-            var svc = PurrServicesBehaviour.instance;
+            var svc = PurrServices.instance;
             var auth = svc.auth;
 
             GUILayout.Label("--- Authentication ---");
@@ -197,7 +197,7 @@ namespace PurrServices
 
         async Task LoginAsync()
         {
-            var svc = PurrServicesBehaviour.instance;
+            var svc = PurrServices.instance;
             var displayName = string.IsNullOrWhiteSpace(_displayName) ? null : _displayName;
             Log($"Auth.LoginAsync(deviceId={Truncate(_deviceId, 12)}, name={displayName ?? "(null)"})");
             var r = await svc.auth.LoginAsync(_deviceId, displayName);
@@ -209,7 +209,7 @@ namespace PurrServices
 
         async Task RegisterAsync()
         {
-            var svc = PurrServicesBehaviour.instance;
+            var svc = PurrServices.instance;
             var displayName = string.IsNullOrWhiteSpace(_displayName) ? null : _displayName;
             Log($"Auth.RegisterAsync(user={_authUsername}, name={displayName ?? "(null)"})");
             var r = await svc.auth.RegisterAsync(_authUsername, _authPassword, displayName);
@@ -221,7 +221,7 @@ namespace PurrServices
 
         async Task LoginWithPasswordAsync()
         {
-            var svc = PurrServicesBehaviour.instance;
+            var svc = PurrServices.instance;
             Log($"Auth.LoginWithPasswordAsync(user={_authUsername})");
             var r = await svc.auth.LoginWithPasswordAsync(_authUsername, _authPassword);
             if (r.success)
@@ -308,7 +308,7 @@ namespace PurrServices
             };
 
             Log($"Lobbies.CreateAsync(name={opts.name ?? "(auto)"}, max={opts.maxPlayers}, vis={opts.visibility})");
-            var r = await PurrServicesBehaviour.instance.lobbies.CreateAsync(opts);
+            var r = await PurrServices.instance.lobbies.CreateAsync(opts);
 
             if (r.success)
             {
@@ -324,7 +324,7 @@ namespace PurrServices
         async Task ListLobbiesAsync()
         {
             Log("Lobbies.ListAsync()");
-            var r = await PurrServicesBehaviour.instance.lobbies.ListAsync();
+            var r = await PurrServices.instance.lobbies.ListAsync();
             if (r.success)
             {
                 _lobbyList = r.lobbies;
@@ -339,7 +339,7 @@ namespace PurrServices
         async Task JoinLobbyAsync(string lobbyId)
         {
             Log($"Lobbies.JoinAsync({Truncate(lobbyId, 12)})");
-            var r = await PurrServicesBehaviour.instance.lobbies.JoinAsync(lobbyId);
+            var r = await PurrServices.instance.lobbies.JoinAsync(lobbyId);
             if (r.success)
             {
                 Log($"Join OK — lobby={Truncate(r.lobbyId, 12)}");
@@ -354,7 +354,7 @@ namespace PurrServices
         async Task JoinByCodeAsync()
         {
             Log($"Lobbies.JoinByCodeAsync({_joinCode})");
-            var r = await PurrServicesBehaviour.instance.lobbies.JoinByCodeAsync(_joinCode);
+            var r = await PurrServices.instance.lobbies.JoinByCodeAsync(_joinCode);
             if (r.success)
             {
                 Log($"JoinByCode OK — lobby={Truncate(r.lobbyId, 12)}");
@@ -373,7 +373,7 @@ namespace PurrServices
                 filter = new Dictionary<string, string> { { _quickFilterKey, _quickFilterValue } };
 
             Log($"Lobbies.QuickJoinAsync(filter={(_quickFilterKey != "" ? _quickFilterKey + "=" + _quickFilterValue : "none")})");
-            var r = await PurrServicesBehaviour.instance.lobbies.QuickJoinAsync(filter);
+            var r = await PurrServices.instance.lobbies.QuickJoinAsync(filter);
             if (r.success)
             {
                 Log($"QuickJoin OK — lobby={Truncate(r.lobbyId, 12)}");
@@ -396,7 +396,7 @@ namespace PurrServices
             }
 
             var lobby = _snapshot.lobby;
-            var playerId = PurrServicesBehaviour.instance.playerId;
+            var playerId = PurrServices.instance.playerId;
             var isHost = playerId == lobby.hostPlayerId;
 
             GUILayout.Label("--- Lobby Info ---");
@@ -500,14 +500,14 @@ namespace PurrServices
         async Task StartLobbyAsync()
         {
             Log($"Lobbies.StartAsync({Truncate(_activeLobbyId, 12)})");
-            var r = await PurrServicesBehaviour.instance.lobbies.StartAsync(_activeLobbyId);
+            var r = await PurrServices.instance.lobbies.StartAsync(_activeLobbyId);
             if (r.success) Log("Start OK"); else LogError($"Start FAILED — {r.error}");
         }
 
         async Task PollLobbyAsync()
         {
             Log($"Lobbies.PollAsync({Truncate(_activeLobbyId, 12)})");
-            var r = await PurrServicesBehaviour.instance.lobbies.PollAsync(_activeLobbyId);
+            var r = await PurrServices.instance.lobbies.PollAsync(_activeLobbyId);
             if (r.success)
             {
                 _snapshot = r.snapshot;
@@ -522,7 +522,7 @@ namespace PurrServices
         async Task LeaveLobbyAsync()
         {
             Log($"Lobbies.LeaveAsync({Truncate(_activeLobbyId, 12)})");
-            var r = await PurrServicesBehaviour.instance.lobbies.LeaveAsync(_activeLobbyId);
+            var r = await PurrServices.instance.lobbies.LeaveAsync(_activeLobbyId);
             if (r.success) Log("Leave OK"); else LogError($"Leave FAILED — {r.error}");
             if (r.success) ExitLobby();
         }
@@ -530,7 +530,7 @@ namespace PurrServices
         async Task DestroyLobbyAsync()
         {
             Log($"Lobbies.DestroyAsync({Truncate(_activeLobbyId, 12)})");
-            var r = await PurrServicesBehaviour.instance.lobbies.DestroyAsync(_activeLobbyId);
+            var r = await PurrServices.instance.lobbies.DestroyAsync(_activeLobbyId);
             if (r.success) Log("Destroy OK"); else LogError($"Destroy FAILED — {r.error}");
             if (r.success) ExitLobby();
         }
@@ -538,7 +538,7 @@ namespace PurrServices
         async Task KickPlayerAsync(string targetId)
         {
             Log($"Lobbies.KickAsync({Truncate(_activeLobbyId, 12)}, {Truncate(targetId, 10)})");
-            var r = await PurrServicesBehaviour.instance.lobbies.KickAsync(_activeLobbyId, targetId);
+            var r = await PurrServices.instance.lobbies.KickAsync(_activeLobbyId, targetId);
             if (r.success) Log($"Kick OK — {Truncate(targetId, 10)}"); else LogError($"Kick FAILED — {r.error}");
         }
 
@@ -546,7 +546,7 @@ namespace PurrServices
         {
             var meta = new Dictionary<string, string> { { _metaKey, _metaValue } };
             Log($"Lobbies.SetMetadataAsync({_metaKey}={_metaValue})");
-            var r = await PurrServicesBehaviour.instance.lobbies.SetMetadataAsync(_activeLobbyId, meta);
+            var r = await PurrServices.instance.lobbies.SetMetadataAsync(_activeLobbyId, meta);
             if (r.success) Log("SetMetadata OK"); else LogError($"SetMetadata FAILED — {r.error}");
         }
 
@@ -554,7 +554,7 @@ namespace PurrServices
         {
             var meta = new Dictionary<string, string> { { _playerMetaKey, _playerMetaValue } };
             Log($"Lobbies.SetPlayerMetadataAsync({_playerMetaKey}={_playerMetaValue})");
-            var r = await PurrServicesBehaviour.instance.lobbies.SetPlayerMetadataAsync(_activeLobbyId, meta);
+            var r = await PurrServices.instance.lobbies.SetPlayerMetadataAsync(_activeLobbyId, meta);
             if (r.success) Log("SetPlayerMeta OK"); else LogError($"SetPlayerMeta FAILED — {r.error}");
         }
 
@@ -600,7 +600,7 @@ namespace PurrServices
             _chatInput = "";
             var bytes = Encoding.UTF8.GetBytes(text);
             Log($"Lobbies.SendChatAsync(\"{Truncate(text, 30)}\")");
-            var r = await PurrServicesBehaviour.instance.lobbies.SendChatAsync(_activeLobbyId, bytes);
+            var r = await PurrServices.instance.lobbies.SendChatAsync(_activeLobbyId, bytes);
             if (r.success) Log($"Chat sent seq={r.seq}"); else LogError($"Chat FAILED — {r.error}");
         }
 
@@ -624,7 +624,7 @@ namespace PurrServices
 
         void DrawStatusBar()
         {
-            var svc = PurrServicesBehaviour.instance;
+            var svc = PurrServices.instance;
             var connState = _connection != null ? _connection.state.ToString() : "None";
 
             GUILayout.BeginHorizontal("box");
@@ -643,7 +643,7 @@ namespace PurrServices
             _playerToken = playerToken;
             _chatMessages.Clear();
 
-            PurrServicesBehaviour.instance.activePlayerToken = playerToken;
+            PurrServices.instance.activePlayerToken = playerToken;
 
             if (initialData.HasValue)
             {
@@ -663,7 +663,7 @@ namespace PurrServices
             _playerToken = null;
             _snapshot = default;
             _chatMessages.Clear();
-            PurrServicesBehaviour.instance.activePlayerToken = null;
+            PurrServices.instance.activePlayerToken = null;
             _tab = Tab.Lobbies;
             Log("Exited lobby");
         }
@@ -673,7 +673,7 @@ namespace PurrServices
             if (_connection != null)
                 DisconnectWebSocket();
 
-            var svc = PurrServicesBehaviour.instance;
+            var svc = PurrServices.instance;
             var wsUrl = svc.serverUrl.Replace("https://", "wss://").Replace("http://", "ws://").TrimEnd('/');
             Log($"WS connecting: {wsUrl}/ws/lobby/{_activeLobbyId}");
             _connection = svc.lobbies.Connect(_activeLobbyId, _playerToken);
