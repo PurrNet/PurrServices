@@ -16,19 +16,15 @@ namespace PurrServices
         {
             get
             {
-                if (_instance != null)
+                if (_instance)
                     return _instance;
 
                 _instance = FindAnyObjectByType<PurrServices>();
 
-                if (_instance != null)
+                if (_instance)
                     return _instance;
 
-                var go = new GameObject("PurrServices");
-                _instance = go.AddComponent<PurrServices>();
-                DontDestroyOnLoad(go);
-
-                return _instance;
+                throw new System.Exception("No `PurrServices` instance found in the scene.");
             }
         }
 
