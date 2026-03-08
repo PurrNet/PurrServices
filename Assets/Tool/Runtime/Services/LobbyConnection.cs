@@ -48,7 +48,7 @@ namespace PurrNet.Services
             _sessionToken = sessionToken;
             _playerToken = playerToken;
 
-            PurrCenter.instance.RegisterConnection(this);
+            PurrServices.instance.RegisterConnection(this);
             Connect();
         }
 
@@ -181,7 +181,7 @@ namespace PurrNet.Services
             }
 
             _state = LobbyConnectionState.Disconnected;
-            PurrCenter.instance.UnregisterConnection(this);
+            PurrServices.instance.UnregisterConnection(this);
         }
 
         internal void Tick()

@@ -5,21 +5,21 @@ namespace PurrNet.Services
 {
     [AddComponentMenu("PurrNet/PurrCenter")]
     [DefaultExecutionOrder(-100)]
-    public class PurrCenter : MonoBehaviour
+    public class PurrServices : MonoBehaviour
     {
         [SerializeField] string _serverUrl = "https://purrnet.dev";
         [SerializeField] string _apiKey;
 
-        static PurrCenter _instance;
+        static PurrServices _instance;
 
-        public static PurrCenter instance
+        public static PurrServices instance
         {
             get
             {
                 if (_instance)
                     return _instance;
 
-                _instance = FindAnyObjectByType<PurrCenter>();
+                _instance = FindAnyObjectByType<PurrServices>();
 
                 if (_instance)
                     return _instance;
