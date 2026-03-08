@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PurrServices.Editor
 {
-    [CustomEditor(typeof(PurrServices))]
+    [CustomEditor(typeof(PurrCenter))]
     public class PurrServicesEditor : UnityEditor.Editor
     {
         static string LinkedProjectIdKey => "PurrServices_LinkedProjectId_" + Application.dataPath;
