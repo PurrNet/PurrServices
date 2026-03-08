@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace PurrNet.Services
 {
     public class AuthService
     {
+        const string PREFS_SESSION_TOKEN = "PurrServices_SessionToken";
+
         readonly ServiceHttp _http;
 
         string _sessionToken;
@@ -24,6 +27,7 @@ namespace PurrNet.Services
         internal AuthService(ServiceHttp http)
         {
             _http = http;
+            _sessionToken = PlayerPrefs.GetString(PREFS_SESSION_TOKEN, null);
         }
 
         public async Task<AuthResult> LoginAsync(string deviceId, string displayName = null)
@@ -87,6 +91,49 @@ namespace PurrNet.Services
             _displayName = response.data.displayName;
             _expiresAt = response.data.expiresAt;
 
+            SaveSession();
+            onLoggedIn?.Invoke();
+
+            return new AuthResult
+            {
+                success = true,
+                playerId = _playerId,
+                displayName = _displayName
+            };
+        }
+
+        /// <summary>
+        /// Validates a previously saved session token against the server.
+        /// On success, restores playerId and displayName and fires onLoggedIn.
+        /// On failure, clears the saved session.
+        /// </summary>
+        public async Task<AuthResult> ValidateSessionAsync()
+        {
+            if (string.IsNullOrEmpty(_sessionToken))
+            {
+                return new AuthResult
+                {
+                    success = false,
+                    error = "No saved session token"
+                };
+            }
+
+            var response = await _http.GetAsync<SessionValidationResponse>("/api/lobby/auth");
+
+            if (!response.success)
+            {
+                ClearSession();
+                return new AuthResult
+                {
+                    success = false,
+                    error = response.error
+                };
+            }
+
+            _playerId = response.data.playerId;
+            _displayName = response.data.displayName;
+            _expiresAt = response.data.expiresAt;
+
             onLoggedIn?.Invoke();
 
             return new AuthResult
@@ -99,12 +146,25 @@ namespace PurrNet.Services
 
         public void Logout()
         {
+            ClearSession();
+            onLoggedOut?.Invoke();
+        }
+
+        void SaveSession()
+        {
+            PlayerPrefs.SetString(PREFS_SESSION_TOKEN, _sessionToken);
+            PlayerPrefs.Save();
+        }
+
+        void ClearSession()
+        {
             _sessionToken = null;
             _playerId = null;
             _displayName = null;
             _expiresAt = null;
 
-            onLoggedOut?.Invoke();
+            PlayerPrefs.DeleteKey(PREFS_SESSION_TOKEN);
+            PlayerPrefs.Save();
         }
     }
 }
