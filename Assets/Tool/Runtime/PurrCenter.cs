@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace PurrServices
 {
-    [AddComponentMenu("PurrNet/PurrServices")]
+    [AddComponentMenu("PurrNet/PurrCenter")]
     [DefaultExecutionOrder(-100)]
     public class PurrCenter : MonoBehaviour
     {
