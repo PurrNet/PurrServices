@@ -4,7 +4,7 @@ using JamesFrowen.SimpleWeb;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     public enum LobbyConnectionState
     {

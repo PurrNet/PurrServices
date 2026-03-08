@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     public class AuthService
     {

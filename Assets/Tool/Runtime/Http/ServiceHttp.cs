@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     public struct HttpResult<T>
     {

@@ -1,4 +1,4 @@
-namespace PurrServices
+namespace PurrNet.Services
 {
     public struct RetryTimer
     {

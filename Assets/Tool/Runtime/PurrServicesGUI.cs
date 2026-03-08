@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     [AddComponentMenu("PurrNet/Services/PurrServicesGUI")]
     public class PurrServicesGUI : MonoBehaviour

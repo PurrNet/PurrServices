@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using PurrNet.Editor;
 using UnityEngine.Networking;
 
-namespace PurrServices.Editor
+namespace PurrNet.Services.Editor
 {
     public class ProjectInfo
     {

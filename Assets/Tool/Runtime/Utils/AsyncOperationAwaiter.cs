@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     public static class AsyncOperationExtensions
     {

@@ -2,7 +2,7 @@ using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     [Serializable]
     public struct WsMessage

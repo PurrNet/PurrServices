@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     [JsonConverter(typeof(StringEnumConverter))]
     public enum LobbyVisibility

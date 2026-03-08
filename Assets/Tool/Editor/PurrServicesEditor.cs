@@ -4,7 +4,7 @@ using PurrNet.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace PurrServices.Editor
+namespace PurrNet.Services.Editor
 {
     [CustomEditor(typeof(PurrCenter))]
     public class PurrServicesEditor : UnityEditor.Editor

@@ -3,7 +3,7 @@ using PurrNet.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace PurrServices.Editor
+namespace PurrNet.Services.Editor
 {
     public class PurrServicesSetupWindow : EditorWindow
     {

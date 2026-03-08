@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PurrServices
+namespace PurrNet.Services
 {
     [AddComponentMenu("PurrNet/PurrCenter")]
     [DefaultExecutionOrder(-100)]
