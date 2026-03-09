@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using JamesFrowen.SimpleWeb;
 using Newtonsoft.Json;
@@ -36,6 +37,12 @@ namespace PurrNet.Services
         public event Action onConnected;
         public event Action onDisconnected;
         public event Action<string> onError;
+
+        public event Action<LobbyPlayer> onPlayerJoined;
+        public event Action<string, string> onPlayerLeft;
+        public event Action<LobbyState> onStateChanged;
+        public event Action<Dictionary<string, string>> onMetadataUpdated;
+        public event Action<string, Dictionary<string, string>> onPlayerMetadataUpdated;
 
         internal LobbyConnection(
             Uri uri,
@@ -124,8 +131,33 @@ namespace PurrNet.Services
                     onSnapshot?.Invoke(snapMsg.snapshot);
                     break;
 
+                case "player_joined":
+                    ApplyPlayerJoined(WsMessageParser.Parse<WsPlayerJoinedMessage>(json));
+                    break;
+
+                case "player_left":
+                    ApplyPlayerLeft(WsMessageParser.Parse<WsPlayerLeftMessage>(json));
+                    break;
+
+                case "state_changed":
+                    ApplyStateChanged(WsMessageParser.Parse<WsStateChangedMessage>(json));
+                    break;
+
+                case "metadata_updated":
+                    ApplyMetadataUpdated(WsMessageParser.Parse<WsMetadataUpdatedMessage>(json));
+                    break;
+
+                case "player_metadata_updated":
+                    ApplyPlayerMetadataUpdated(WsMessageParser.Parse<WsPlayerMetadataUpdatedMessage>(json));
+                    break;
+
                 case "chat":
                     var chatMsg = WsMessageParser.ParseChat(json);
+                    var chatSnap = currentSnapshot;
+                    if (chatSnap.chat == null)
+                        chatSnap.chat = new List<ChatMessage>();
+                    chatSnap.chat.Add(chatMsg.message);
+                    currentSnapshot = chatSnap;
                     onChat?.Invoke(chatMsg.message);
                     break;
 
@@ -153,6 +185,63 @@ namespace PurrNet.Services
                 case "pong":
                     break;
             }
+        }
+
+        void ApplyPlayerJoined(WsPlayerJoinedMessage msg)
+        {
+            var snap = currentSnapshot;
+            if (snap.players == null)
+                snap.players = new List<LobbyPlayer>();
+            snap.players.Add(msg.player);
+            snap.lobby.version = msg.version;
+            currentSnapshot = snap;
+            onPlayerJoined?.Invoke(msg.player);
+            onSnapshot?.Invoke(currentSnapshot);
+        }
+
+        void ApplyPlayerLeft(WsPlayerLeftMessage msg)
+        {
+            var snap = currentSnapshot;
+            snap.players?.RemoveAll(p => p.id == msg.playerId);
+            snap.playerMetadata?.Remove(msg.playerId);
+            if (!string.IsNullOrEmpty(msg.newHostPlayerId))
+                snap.lobby.hostPlayerId = msg.newHostPlayerId;
+            snap.lobby.version = msg.version;
+            currentSnapshot = snap;
+            onPlayerLeft?.Invoke(msg.playerId, msg.newHostPlayerId);
+            onSnapshot?.Invoke(currentSnapshot);
+        }
+
+        void ApplyStateChanged(WsStateChangedMessage msg)
+        {
+            var snap = currentSnapshot;
+            snap.lobby.state = msg.state;
+            snap.lobby.version = msg.version;
+            currentSnapshot = snap;
+            onStateChanged?.Invoke(msg.state);
+            onSnapshot?.Invoke(currentSnapshot);
+        }
+
+        void ApplyMetadataUpdated(WsMetadataUpdatedMessage msg)
+        {
+            var snap = currentSnapshot;
+            snap.metadata = msg.metadata;
+            snap.lobby.version = msg.version;
+            currentSnapshot = snap;
+            onMetadataUpdated?.Invoke(msg.metadata);
+            onSnapshot?.Invoke(currentSnapshot);
+        }
+
+        void ApplyPlayerMetadataUpdated(WsPlayerMetadataUpdatedMessage msg)
+        {
+            var snap = currentSnapshot;
+            if (snap.playerMetadata == null)
+                snap.playerMetadata = new Dictionary<string, Dictionary<string, string>>();
+            snap.playerMetadata[msg.playerId] = msg.metadata;
+            snap.lobby.version = msg.version;
+            currentSnapshot = snap;
+            onPlayerMetadataUpdated?.Invoke(msg.playerId, msg.metadata);
+            onSnapshot?.Invoke(currentSnapshot);
         }
 
         void HandleError(Exception ex)

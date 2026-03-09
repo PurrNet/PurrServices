@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -62,6 +63,77 @@ namespace PurrNet.Services
 
         [JsonProperty("message")]
         public ChatMessage message;
+    }
+
+    [Serializable]
+    public struct WsPlayerJoinedMessage
+    {
+        [JsonProperty("type")]
+        public string type;
+
+        [JsonProperty("player")]
+        public LobbyPlayer player;
+
+        [JsonProperty("version")]
+        public int version;
+    }
+
+    [Serializable]
+    public struct WsPlayerLeftMessage
+    {
+        [JsonProperty("type")]
+        public string type;
+
+        [JsonProperty("playerId")]
+        public string playerId;
+
+        [JsonProperty("newHostPlayerId")]
+        public string newHostPlayerId;
+
+        [JsonProperty("version")]
+        public int version;
+    }
+
+    [Serializable]
+    public struct WsStateChangedMessage
+    {
+        [JsonProperty("type")]
+        public string type;
+
+        [JsonProperty("state")]
+        public LobbyState state;
+
+        [JsonProperty("version")]
+        public int version;
+    }
+
+    [Serializable]
+    public struct WsMetadataUpdatedMessage
+    {
+        [JsonProperty("type")]
+        public string type;
+
+        [JsonProperty("metadata")]
+        public Dictionary<string, string> metadata;
+
+        [JsonProperty("version")]
+        public int version;
+    }
+
+    [Serializable]
+    public struct WsPlayerMetadataUpdatedMessage
+    {
+        [JsonProperty("type")]
+        public string type;
+
+        [JsonProperty("playerId")]
+        public string playerId;
+
+        [JsonProperty("metadata")]
+        public Dictionary<string, string> metadata;
+
+        [JsonProperty("version")]
+        public int version;
     }
 
     [Serializable]

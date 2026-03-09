@@ -23,17 +23,15 @@ namespace PurrNet.Services
             _getServerUrl = getServerUrl;
         }
 
-        public async Task<LobbyResult> CreateAsync(CreateLobbyOptions options = null)
+        public async Task<LobbyResult> CreateAsync(CreateLobbyOptions? options = null)
         {
             var request = new CreateLobbyRequest();
+            var opts = options ?? CreateLobbyOptions.Default;
 
-            if (options != null)
-            {
-                request.name = options.name;
-                request.maxPlayers = options.maxPlayers;
-                request.visibility = options.visibility;
-                request.metadata = options.metadata;
-            }
+            request.name = opts.name;
+            request.maxPlayers = opts.maxPlayers;
+            request.visibility = opts.visibility;
+            request.metadata = opts.metadata;
 
             var response = await _http.PostAsync<CreateLobbyResponse>("/api/lobby", request);
 

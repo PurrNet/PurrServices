@@ -133,12 +133,18 @@ namespace PurrNet.Services
         public Dictionary<string, string> metadata;
     }
 
-    public class CreateLobbyOptions
+    public struct CreateLobbyOptions
     {
         public string name;
-        public int maxPlayers = 8;
-        public LobbyVisibility visibility = LobbyVisibility.Private;
+        public int maxPlayers;
+        public LobbyVisibility visibility;
         public Dictionary<string, string> metadata;
+
+        public static CreateLobbyOptions Default => new CreateLobbyOptions
+        {
+            maxPlayers = 8,
+            visibility = LobbyVisibility.Private
+        };
     }
 
     [Serializable]
