@@ -160,6 +160,8 @@ namespace PurrNet.Services
 
         public void Logout()
         {
+            // Disconnect all lobby connections before clearing the session
+            PurrServices.instance.DisconnectAllConnections();
             ClearSession();
             onLoggedOut?.Invoke();
         }

@@ -38,7 +38,7 @@ namespace PurrNet.Services
         string _playerToken;
         LobbyConnection _connection;
         LobbySnapshot _snapshot;
-        List<LobbyData> _lobbyList;
+        List<LobbyListEntry> _lobbyList;
 
         // --- Metadata fields ---
         string _metaKey = "";

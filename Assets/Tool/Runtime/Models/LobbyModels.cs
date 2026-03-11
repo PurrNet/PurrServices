@@ -243,10 +243,53 @@ namespace PurrNet.Services
     }
 
     [Serializable]
+    public struct LobbyListEntry
+    {
+        [JsonProperty("id")]
+        public string id;
+
+        [JsonProperty("name")]
+        public string name;
+
+        [JsonProperty("ownerId")]
+        public string ownerId;
+
+        [JsonProperty("hostPlayerId")]
+        public string hostPlayerId;
+
+        [JsonProperty("maxPlayers")]
+        public int maxPlayers;
+
+        [JsonProperty("visibility")]
+        public LobbyVisibility visibility;
+
+        [JsonProperty("state")]
+        public LobbyState state;
+
+        [JsonProperty("code")]
+        public string code;
+
+        [JsonProperty("chatSeq")]
+        public int chatSeq;
+
+        [JsonProperty("version")]
+        public int version;
+
+        [JsonProperty("createdAt")]
+        public long createdAt;
+
+        [JsonProperty("playerCount")]
+        public int playerCount;
+
+        [JsonProperty("metadata")]
+        public Dictionary<string, string> metadata;
+    }
+
+    [Serializable]
     public struct LobbyListResponse
     {
         [JsonProperty("lobbies")]
-        public List<LobbyData> lobbies;
+        public List<LobbyListEntry> lobbies;
     }
 
     [Serializable]
@@ -284,7 +327,7 @@ namespace PurrNet.Services
     public struct LobbyListResult
     {
         public bool success;
-        public List<LobbyData> lobbies;
+        public List<LobbyListEntry> lobbies;
         public string error;
     }
 

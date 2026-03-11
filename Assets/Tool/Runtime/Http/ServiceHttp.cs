@@ -77,12 +77,37 @@ namespace PurrNet.Services
             }
             else
             {
-                result.error = !string.IsNullOrEmpty(request.downloadHandler?.text)
-                    ? request.downloadHandler.text
-                    : request.error;
+                result.error = ParseErrorMessage(request);
             }
 
             return result;
+        }
+
+        static string ParseErrorMessage(UnityWebRequest request)
+        {
+            var body = request.downloadHandler?.text;
+            if (string.IsNullOrEmpty(body))
+                return request.error;
+
+            try
+            {
+                var obj = JsonConvert.DeserializeObject<ErrorResponse>(body);
+                if (!string.IsNullOrEmpty(obj.error))
+                    return obj.error;
+            }
+            catch
+            {
+                // not JSON or wrong shape — fall through
+            }
+
+            return body;
+        }
+
+        [Serializable]
+        struct ErrorResponse
+        {
+            [JsonProperty("error")]
+            public string error;
         }
 
         public async Task<HttpResult<T>> GetAsync<T>(string path)

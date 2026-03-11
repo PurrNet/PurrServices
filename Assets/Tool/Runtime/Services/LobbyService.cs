@@ -66,9 +66,25 @@ namespace PurrNet.Services
             };
         }
 
-        public async Task<LobbyListResult> ListAsync()
+        public async Task<LobbyListResult> ListAsync(Dictionary<string, string> filter = null)
         {
-            var response = await _http.GetAsync<LobbyListResponse>("/api/lobby");
+            var path = "/api/lobby";
+
+            if (filter != null && filter.Count > 0)
+            {
+                var query = new System.Text.StringBuilder();
+                foreach (var kvp in filter)
+                {
+                    query.Append(query.Length == 0 ? '?' : '&');
+                    query.Append("filter.");
+                    query.Append(Uri.EscapeDataString(kvp.Key));
+                    query.Append('=');
+                    query.Append(Uri.EscapeDataString(kvp.Value));
+                }
+                path += query.ToString();
+            }
+
+            var response = await _http.GetAsync<LobbyListResponse>(path);
 
             if (!response.success)
             {

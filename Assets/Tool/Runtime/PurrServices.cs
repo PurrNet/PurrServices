@@ -104,6 +104,14 @@ namespace PurrNet.Services
                 _instance = null;
         }
 
+        internal void DisconnectAllConnections()
+        {
+            for (int i = _connections.Count - 1; i >= 0; i--)
+            {
+                _connections[i].Disconnect();
+            }
+        }
+
         internal void RegisterConnection(LobbyConnection connection)
         {
             if (!_connections.Contains(connection))
