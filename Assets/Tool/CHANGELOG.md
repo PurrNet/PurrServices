@@ -1,3 +1,10 @@
+# [1.0.0-beta.3](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-03-11)
+
+
+### Bug Fixes
+
+* editor specific cookie scope ([bd59e9c](https://github.com/PurrNet/PurrServices/commit/bd59e9c5cdc477493bcd2fce44527b019dc41a68))
+
 # [1.0.0-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2026-03-09)
 
 
