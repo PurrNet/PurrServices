@@ -9,6 +9,20 @@ namespace PurrNet.Services
     {
         const string PREFS_SESSION_TOKEN = "PurrServices_SessionToken";
 
+        static string PrefsKey
+        {
+            get
+            {
+#if UNITY_EDITOR
+                var projectPath = Application.dataPath;
+                var folderName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(projectPath));
+                return PREFS_SESSION_TOKEN + "_" + folderName;
+#else
+                return PREFS_SESSION_TOKEN;
+#endif
+            }
+        }
+
         readonly ServiceHttp _http;
 
         string _sessionToken;
@@ -27,7 +41,7 @@ namespace PurrNet.Services
         internal AuthService(ServiceHttp http)
         {
             _http = http;
-            _sessionToken = PlayerPrefs.GetString(PREFS_SESSION_TOKEN, null);
+            _sessionToken = PlayerPrefs.GetString(PrefsKey, null);
         }
 
         public async Task<AuthResult> LoginAsync(string deviceId, string displayName = null)
@@ -152,7 +166,7 @@ namespace PurrNet.Services
 
         void SaveSession()
         {
-            PlayerPrefs.SetString(PREFS_SESSION_TOKEN, _sessionToken);
+            PlayerPrefs.SetString(PrefsKey, _sessionToken);
             PlayerPrefs.Save();
         }
 
@@ -163,7 +177,7 @@ namespace PurrNet.Services
             _displayName = null;
             _expiresAt = null;
 
-            PlayerPrefs.DeleteKey(PREFS_SESSION_TOKEN);
+            PlayerPrefs.DeleteKey(PrefsKey);
             PlayerPrefs.Save();
         }
     }
