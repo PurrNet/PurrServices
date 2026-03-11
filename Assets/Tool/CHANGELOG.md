@@ -1,3 +1,10 @@
+# [1.0.0-beta.4](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-03-11)
+
+
+### Bug Fixes
+
+* lobby search ([481eecf](https://github.com/PurrNet/PurrServices/commit/481eecf728af9df971a5580f8067370b86739b05))
+
 # [1.0.0-beta.3](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-03-11)
 
 
