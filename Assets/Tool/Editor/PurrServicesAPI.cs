@@ -51,8 +51,8 @@ namespace PurrNet.Services.Editor
         [JsonProperty("name")]
         public string name;
 
-        [JsonProperty("state")]
-        public string state;
+        [JsonProperty("joinable")]
+        public bool joinable;
 
         [JsonProperty("visibility")]
         public string visibility;

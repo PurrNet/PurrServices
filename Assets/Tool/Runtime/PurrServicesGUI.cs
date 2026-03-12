@@ -288,7 +288,7 @@ namespace PurrNet.Services
                     GUILayout.BeginHorizontal("box");
                     GUILayout.Label(Truncate(l.id, 8), GUILayout.Width(70));
                     GUILayout.Label(l.name ?? "—", GUILayout.Width(90));
-                    GUILayout.Label($"{l.state}", GUILayout.Width(60));
+                    GUILayout.Label(l.joinable ? "Open" : "Closed", GUILayout.Width(60));
                     GUILayout.Label(l.code ?? "—", GUILayout.Width(60));
                     GUILayout.Label($"v{l.version}", GUILayout.Width(30));
                     if (GUILayout.Button("Join", GUILayout.Width(50)) && !_busy)
@@ -403,7 +403,7 @@ namespace PurrNet.Services
             GUILayout.Label($"ID: {lobby.id}");
             GUILayout.Label($"Name: {lobby.name ?? "—"}");
             GUILayout.Label($"Code: {lobby.code ?? "—"}");
-            GUILayout.Label($"State: {lobby.state}  |  Version: {lobby.version}");
+            GUILayout.Label($"Joinable: {lobby.joinable}  |  Version: {lobby.version}");
             GUILayout.Label($"Host: {lobby.hostPlayerId}  |  Max: {lobby.maxPlayers}");
             GUILayout.Label($"Players: {(_snapshot.players != null ? _snapshot.players.Count : 0)}/{lobby.maxPlayers}");
 
@@ -411,8 +411,8 @@ namespace PurrNet.Services
 
             // --- Action buttons ---
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Start") && !_busy)
-                RunAsync(StartLobbyAsync());
+            if (GUILayout.Button(lobby.joinable ? "Close" : "Open") && !_busy)
+                RunAsync(SetJoinableAsync(!lobby.joinable));
             if (GUILayout.Button("Poll") && !_busy)
                 RunAsync(PollLobbyAsync());
             if (GUILayout.Button("Leave") && !_busy)
@@ -497,11 +497,11 @@ namespace PurrNet.Services
             GUILayout.EndHorizontal();
         }
 
-        async Task StartLobbyAsync()
+        async Task SetJoinableAsync(bool joinable)
         {
-            Log($"Lobbies.StartAsync({Truncate(_activeLobbyId, 12)})");
-            var r = await PurrServices.instance.lobbies.StartAsync(_activeLobbyId);
-            if (r.success) Log("Start OK"); else LogError($"Start FAILED — {r.error}");
+            Log($"Lobbies.SetJoinableAsync({Truncate(_activeLobbyId, 12)}, {joinable})");
+            var r = await PurrServices.instance.lobbies.SetJoinableAsync(_activeLobbyId, joinable);
+            if (r.success) Log($"SetJoinable({joinable}) OK"); else LogError($"SetJoinable FAILED — {r.error}");
         }
 
         async Task PollLobbyAsync()

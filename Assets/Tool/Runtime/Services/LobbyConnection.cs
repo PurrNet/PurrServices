@@ -40,7 +40,7 @@ namespace PurrNet.Services
 
         public event Action<LobbyPlayer> onPlayerJoined;
         public event Action<string, string> onPlayerLeft;
-        public event Action<LobbyState> onStateChanged;
+        public event Action<bool> onJoinableChanged;
         public event Action<Dictionary<string, string>> onMetadataUpdated;
         public event Action<string, Dictionary<string, string>> onPlayerMetadataUpdated;
 
@@ -139,8 +139,8 @@ namespace PurrNet.Services
                     ApplyPlayerLeft(WsMessageParser.Parse<WsPlayerLeftMessage>(json));
                     break;
 
-                case "state_changed":
-                    ApplyStateChanged(WsMessageParser.Parse<WsStateChangedMessage>(json));
+                case "joinable_changed":
+                    ApplyJoinableChanged(WsMessageParser.Parse<WsJoinableChangedMessage>(json));
                     break;
 
                 case "metadata_updated":
@@ -212,13 +212,13 @@ namespace PurrNet.Services
             onSnapshot?.Invoke(currentSnapshot);
         }
 
-        void ApplyStateChanged(WsStateChangedMessage msg)
+        void ApplyJoinableChanged(WsJoinableChangedMessage msg)
         {
             var snap = currentSnapshot;
-            snap.lobby.state = msg.state;
+            snap.lobby.joinable = msg.joinable;
             snap.lobby.version = msg.version;
             currentSnapshot = snap;
-            onStateChanged?.Invoke(msg.state);
+            onJoinableChanged?.Invoke(msg.joinable);
             onSnapshot?.Invoke(currentSnapshot);
         }
 

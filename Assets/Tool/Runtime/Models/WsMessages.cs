@@ -95,13 +95,13 @@ namespace PurrNet.Services
     }
 
     [Serializable]
-    public struct WsStateChangedMessage
+    public struct WsJoinableChangedMessage
     {
         [JsonProperty("type")]
         public string type;
 
-        [JsonProperty("state")]
-        public LobbyState state;
+        [JsonProperty("joinable")]
+        public bool joinable;
 
         [JsonProperty("version")]
         public int version;

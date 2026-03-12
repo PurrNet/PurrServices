@@ -57,7 +57,7 @@ namespace PurrNet.Services
                     hostPlayerId = data.hostPlayerId,
                     maxPlayers = data.maxPlayers,
                     visibility = data.visibility,
-                    state = data.state,
+                    joinable = data.joinable,
                     code = data.code,
                     chatSeq = data.chatSeq,
                     version = data.version,
@@ -201,9 +201,10 @@ namespace PurrNet.Services
             };
         }
 
-        public async Task<ServiceResult> StartAsync(string lobbyId)
+        public async Task<ServiceResult> SetJoinableAsync(string lobbyId, bool joinable)
         {
-            var response = await _http.PostAsync<SuccessResponse>($"/api/lobby/{lobbyId}/start");
+            var request = new SetJoinableRequest { joinable = joinable };
+            var response = await _http.PostAsync<SuccessResponse>($"/api/lobby/{lobbyId}/start", request);
 
             return new ServiceResult
             {

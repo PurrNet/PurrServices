@@ -15,17 +15,6 @@ namespace PurrNet.Services
         Private
     }
 
-    [JsonConverter(typeof(StringEnumConverter))]
-    public enum LobbyState
-    {
-        [EnumMember(Value = "waiting")]
-        Waiting,
-        [EnumMember(Value = "starting")]
-        Starting,
-        [EnumMember(Value = "started")]
-        Started
-    }
-
     [Serializable]
     public struct LobbyData
     {
@@ -47,8 +36,8 @@ namespace PurrNet.Services
         [JsonProperty("visibility")]
         public LobbyVisibility visibility;
 
-        [JsonProperty("state")]
-        public LobbyState state;
+        [JsonProperty("joinable")]
+        public bool joinable;
 
         [JsonProperty("code")]
         public string code;
@@ -168,8 +157,8 @@ namespace PurrNet.Services
         [JsonProperty("visibility")]
         public LobbyVisibility visibility;
 
-        [JsonProperty("state")]
-        public LobbyState state;
+        [JsonProperty("joinable")]
+        public bool joinable;
 
         [JsonProperty("code")]
         public string code;
@@ -212,6 +201,13 @@ namespace PurrNet.Services
     {
         [JsonProperty("filter", NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, string> filter;
+    }
+
+    [Serializable]
+    public struct SetJoinableRequest
+    {
+        [JsonProperty("joinable")]
+        public bool joinable;
     }
 
     [Serializable]
@@ -263,8 +259,8 @@ namespace PurrNet.Services
         [JsonProperty("visibility")]
         public LobbyVisibility visibility;
 
-        [JsonProperty("state")]
-        public LobbyState state;
+        [JsonProperty("joinable")]
+        public bool joinable;
 
         [JsonProperty("code")]
         public string code;
