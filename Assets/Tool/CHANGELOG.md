@@ -1,3 +1,10 @@
+# [1.0.0-beta.5](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-03-12)
+
+
+### Bug Fixes
+
+* instead of lobby state, have a "isJoinabled" boolean ([c98e3d7](https://github.com/PurrNet/PurrServices/commit/c98e3d74835b5d1f085445c0141c94414abeacda))
+
 # [1.0.0-beta.4](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-03-11)
 
 
