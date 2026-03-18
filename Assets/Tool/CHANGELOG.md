@@ -1,3 +1,10 @@
+# [1.0.0-beta.6](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-03-18)
+
+
+### Features
+
+* better lobby searching ([afee874](https://github.com/PurrNet/PurrServices/commit/afee87409128a257a056b04bd18fca6fc38eccd9))
+
 # [1.0.0-beta.5](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-03-12)
 
 
