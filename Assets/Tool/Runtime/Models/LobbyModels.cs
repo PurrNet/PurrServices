@@ -204,6 +204,35 @@ namespace PurrNet.Services
     }
 
     [Serializable]
+    public struct QuickJoinQueryRequest
+    {
+        [JsonProperty("stringFilters", NullValueHandling = NullValueHandling.Ignore)]
+        public List<StringFilterEntry> stringFilters;
+
+        [JsonProperty("numericalFilters", NullValueHandling = NullValueHandling.Ignore)]
+        public List<NumericalFilterEntry> numericalFilters;
+
+        [JsonProperty("slotsAvailable", NullValueHandling = NullValueHandling.Ignore)]
+        public int? slotsAvailable;
+    }
+
+    [Serializable]
+    public struct StringFilterEntry
+    {
+        [JsonProperty("key")] public string key;
+        [JsonProperty("op")] public string op;
+        [JsonProperty("value")] public string value;
+    }
+
+    [Serializable]
+    public struct NumericalFilterEntry
+    {
+        [JsonProperty("key")] public string key;
+        [JsonProperty("op")] public string op;
+        [JsonProperty("value")] public int value;
+    }
+
+    [Serializable]
     public struct SetJoinableRequest
     {
         [JsonProperty("joinable")]
@@ -339,5 +368,140 @@ namespace PurrNet.Services
         public bool success;
         public int seq;
         public string error;
+    }
+
+    public enum LobbyComparison
+    {
+        Equal,
+        NotEqual,
+        LessThan,
+        GreaterThan,
+        LessThanOrEqual,
+        GreaterThanOrEqual
+    }
+
+    public class LobbyQuery
+    {
+        readonly List<(string key, LobbyComparison op, string value)> _stringFilters = new();
+        readonly List<(string key, LobbyComparison op, int value)> _numericalFilters = new();
+        readonly List<(string key, int target)> _nearSorts = new();
+        int? _slotsAvailable;
+        int? _maxResults;
+
+        public LobbyQuery AddStringFilter(string key, LobbyComparison op, string value)
+        {
+            _stringFilters.Add((key, op, value));
+            return this;
+        }
+
+        public LobbyQuery AddNumericalFilter(string key, LobbyComparison op, int value)
+        {
+            _numericalFilters.Add((key, op, value));
+            return this;
+        }
+
+        public LobbyQuery AddNearValueFilter(string key, int target)
+        {
+            _nearSorts.Add((key, target));
+            return this;
+        }
+
+        public LobbyQuery SetSlotsAvailable(int slots)
+        {
+            _slotsAvailable = slots;
+            return this;
+        }
+
+        public LobbyQuery SetMaxResults(int max)
+        {
+            _maxResults = max;
+            return this;
+        }
+
+        static string OpToString(LobbyComparison op)
+        {
+            switch (op)
+            {
+                case LobbyComparison.Equal: return "eq";
+                case LobbyComparison.NotEqual: return "neq";
+                case LobbyComparison.LessThan: return "lt";
+                case LobbyComparison.GreaterThan: return "gt";
+                case LobbyComparison.LessThanOrEqual: return "lte";
+                case LobbyComparison.GreaterThanOrEqual: return "gte";
+                default: return "eq";
+            }
+        }
+
+        internal string ToQueryString()
+        {
+            var sb = new System.Text.StringBuilder();
+
+            foreach (var (key, op, value) in _stringFilters)
+            {
+                sb.Append(sb.Length == 0 ? '?' : '&');
+                sb.Append("filter.");
+                sb.Append(Uri.EscapeDataString(key));
+                sb.Append('=');
+                sb.Append(Uri.EscapeDataString(OpToString(op) + ":" + value));
+            }
+
+            foreach (var (key, op, value) in _numericalFilters)
+            {
+                sb.Append(sb.Length == 0 ? '?' : '&');
+                sb.Append("nfilter.");
+                sb.Append(Uri.EscapeDataString(key));
+                sb.Append('=');
+                sb.Append(Uri.EscapeDataString(OpToString(op) + ":" + value));
+            }
+
+            foreach (var (key, target) in _nearSorts)
+            {
+                sb.Append(sb.Length == 0 ? '?' : '&');
+                sb.Append("near.");
+                sb.Append(Uri.EscapeDataString(key));
+                sb.Append('=');
+                sb.Append(target);
+            }
+
+            if (_slotsAvailable.HasValue)
+            {
+                sb.Append(sb.Length == 0 ? '?' : '&');
+                sb.Append("slotsAvailable=");
+                sb.Append(_slotsAvailable.Value);
+            }
+
+            if (_maxResults.HasValue)
+            {
+                sb.Append(sb.Length == 0 ? '?' : '&');
+                sb.Append("maxResults=");
+                sb.Append(_maxResults.Value);
+            }
+
+            return sb.ToString();
+        }
+
+        internal QuickJoinQueryRequest ToQuickJoinBody()
+        {
+            var req = new QuickJoinQueryRequest();
+
+            if (_stringFilters.Count > 0)
+            {
+                req.stringFilters = new List<StringFilterEntry>();
+                foreach (var (key, op, value) in _stringFilters)
+                    req.stringFilters.Add(new StringFilterEntry { key = key, op = OpToString(op), value = value });
+            }
+
+            if (_numericalFilters.Count > 0)
+            {
+                req.numericalFilters = new List<NumericalFilterEntry>();
+                foreach (var (key, op, value) in _numericalFilters)
+                    req.numericalFilters.Add(new NumericalFilterEntry { key = key, op = OpToString(op), value = value });
+            }
+
+            if (_slotsAvailable.HasValue)
+                req.slotsAvailable = _slotsAvailable.Value;
+
+            return req;
+        }
     }
 }

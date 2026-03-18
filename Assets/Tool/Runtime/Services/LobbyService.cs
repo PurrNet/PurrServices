@@ -68,21 +68,23 @@ namespace PurrNet.Services
 
         public async Task<LobbyListResult> ListAsync(Dictionary<string, string> filter = null)
         {
-            var path = "/api/lobby";
-
             if (filter != null && filter.Count > 0)
             {
-                var query = new System.Text.StringBuilder();
+                var query = new LobbyQuery();
                 foreach (var kvp in filter)
-                {
-                    query.Append(query.Length == 0 ? '?' : '&');
-                    query.Append("filter.");
-                    query.Append(Uri.EscapeDataString(kvp.Key));
-                    query.Append('=');
-                    query.Append(Uri.EscapeDataString(kvp.Value));
-                }
-                path += query.ToString();
+                    query.AddStringFilter(kvp.Key, LobbyComparison.Equal, kvp.Value);
+                return await ListAsync(query);
             }
+
+            return await ListAsync((LobbyQuery)null);
+        }
+
+        public async Task<LobbyListResult> ListAsync(LobbyQuery query)
+        {
+            var path = "/api/lobby";
+
+            if (query != null)
+                path += query.ToQueryString();
 
             var response = await _http.GetAsync<LobbyListResponse>(path);
 
@@ -147,7 +149,25 @@ namespace PurrNet.Services
 
         public async Task<JoinResult> QuickJoinAsync(Dictionary<string, string> filter = null)
         {
-            var request = new QuickJoinRequest { filter = filter };
+            if (filter != null && filter.Count > 0)
+            {
+                var query = new LobbyQuery();
+                foreach (var kvp in filter)
+                    query.AddStringFilter(kvp.Key, LobbyComparison.Equal, kvp.Value);
+                return await QuickJoinAsync(query);
+            }
+
+            return await QuickJoinAsync((LobbyQuery)null);
+        }
+
+        public async Task<JoinResult> QuickJoinAsync(LobbyQuery query)
+        {
+            object request;
+            if (query != null)
+                request = query.ToQuickJoinBody();
+            else
+                request = new QuickJoinRequest();
+
             var response = await _http.PostAsync<JoinResponse>("/api/lobby/quick-join", request);
 
             if (!response.success)
