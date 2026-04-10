@@ -108,6 +108,9 @@ namespace PurrNet.Services
 
         void HandleData(ArraySegment<byte> data)
         {
+            if (data.Array == null)
+                return;
+
             var json = Encoding.UTF8.GetString(data.Array, data.Offset, data.Count);
             var type = WsMessageParser.GetMessageType(json);
 
