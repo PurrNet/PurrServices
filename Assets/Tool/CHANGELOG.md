@@ -1,3 +1,15 @@
+# [1.0.0-beta.7](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-04-10)
+
+
+### Bug Fixes
+
+* handle null data array in HandleData method ([eec481d](https://github.com/PurrNet/PurrServices/commit/eec481d064e4c77bf0f8c96fd75d8f61ddacdd17))
+
+
+### Features
+
+* add Edgegap service and GUI integration for server deployment ([3f1ea5e](https://github.com/PurrNet/PurrServices/commit/3f1ea5e1b100b17dccba6bf2db2100c5e623ef25))
+
 # [1.0.0-beta.6](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-03-18)
 
 
