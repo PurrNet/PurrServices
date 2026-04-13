@@ -8,7 +8,7 @@ namespace PurrNet.Services
     /// requests, so the token never touches the game client.
     ///
     /// Requires the player to be authenticated via <see cref="AuthService"/>
-    /// ; the verified player session is used for per-user deployment limits.
+    /// the verified player session is used for per-user deployment limits.
     /// </summary>
     public class EdgegapService
     {
@@ -25,16 +25,16 @@ namespace PurrNet.Services
         /// The authenticated player's session is sent automatically for
         /// per-user deployment limiting.
         /// </summary>
-        /// <param name="userIps">
-        /// IP addresses of the players who will connect. Edgegap uses these
-        /// to pick the lowest-latency region. Pass null or empty to let
-        /// Edgegap choose a default region.
+        /// <param name="playerIds">
+        /// Player IDs of the players who will connect. The server resolves
+        /// these to cached IP addresses for optimal region selection.
+        /// Pass null or empty to let Edgegap choose a default region.
         /// </param>
-        public async Task<DeployResult> DeployAsync(string[] userIps = null)
+        public async Task<DeployResult> DeployAsync(string[] playerIds = null)
         {
             var request = new EdgegapDeployRequest
             {
-                userIps = userIps
+                playerIds = playerIds
             };
 
             var response = await _http.PostAsync<EdgegapDeployResponse>(
@@ -111,20 +111,53 @@ namespace PurrNet.Services
         }
 
         /// <summary>
+        /// Stop every active deployment owned by the authenticated player
+        /// in the current project. Scoped to the calling player only —
+        /// other players' deployments are never touched.
+        ///
+        /// Best-effort: if Edgegap fails on one deployment the others still
+        /// proceed. Each deployment's local concurrency slot is freed
+        /// regardless of Edgegap reachability, so a follow-up Deploy call
+        /// will not hit the limit.
+        /// </summary>
+        public async Task<DeploymentStopAllResult> StopAllAsync()
+        {
+            var response = await _http.DeleteAsync<EdgegapStopAllResponse>(
+                "/api/edgegap/deployments"
+            );
+
+            if (!response.success)
+            {
+                return new DeploymentStopAllResult
+                {
+                    success = false,
+                    error = response.error
+                };
+            }
+
+            return new DeploymentStopAllResult
+            {
+                success = true,
+                count = response.data.count,
+                stopped = response.data.stopped
+            };
+        }
+
+        /// <summary>
         /// Deploy a server and wait until it is ready (or an error occurs).
         /// Polls every <paramref name="pollIntervalMs"/> milliseconds up to
         /// <paramref name="timeoutMs"/> total.
         /// </summary>
-        /// <param name="userIps">Player IPs for region selection.</param>
+        /// <param name="playerIds">Player IDs for region selection (resolved to IPs server-side).</param>
         /// <param name="pollIntervalMs">Milliseconds between status polls (default 2000).</param>
         /// <param name="timeoutMs">Total timeout in milliseconds (default 300000 = 5 min).</param>
         /// <returns>The final status, or an error result if it timed out or failed.</returns>
         public async Task<DeploymentStatusResult> DeployAndWaitAsync(
-            string[] userIps = null,
+            string[] playerIds = null,
             int pollIntervalMs = 2000,
             int timeoutMs = 300000)
         {
-            var deployResult = await DeployAsync(userIps);
+            var deployResult = await DeployAsync(playerIds);
             if (!deployResult.success)
             {
                 return new DeploymentStatusResult

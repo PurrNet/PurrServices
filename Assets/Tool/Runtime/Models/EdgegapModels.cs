@@ -8,10 +8,11 @@ namespace PurrNet.Services
     public struct EdgegapDeployRequest
     {
         /// <summary>
-        /// Player IPs for optimal region selection.
+        /// Player IDs for server region selection.
+        /// The server resolves these to cached IP addresses.
         /// </summary>
-        [JsonProperty("userIps", NullValueHandling = NullValueHandling.Ignore)]
-        public string[] userIps;
+        [JsonProperty("playerIds", NullValueHandling = NullValueHandling.Ignore)]
+        public string[] playerIds;
     }
 
     [Serializable]
@@ -75,6 +76,29 @@ namespace PurrNet.Services
         public string requestId;
     }
 
+    [Serializable]
+    public struct EdgegapStoppedDeployment
+    {
+        [JsonProperty("requestId")]
+        public string requestId;
+
+        [JsonProperty("ok")]
+        public bool ok;
+
+        [JsonProperty("error")]
+        public string error;
+    }
+
+    [Serializable]
+    public struct EdgegapStopAllResponse
+    {
+        [JsonProperty("count")]
+        public int count;
+
+        [JsonProperty("stopped")]
+        public EdgegapStoppedDeployment[] stopped;
+    }
+
     public struct DeployResult
     {
         public bool success;
@@ -93,6 +117,14 @@ namespace PurrNet.Services
     {
         public bool success;
         public string requestId;
+        public string error;
+    }
+
+    public struct DeploymentStopAllResult
+    {
+        public bool success;
+        public int count;
+        public EdgegapStoppedDeployment[] stopped;
         public string error;
     }
 }
