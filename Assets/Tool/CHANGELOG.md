@@ -1,3 +1,10 @@
+# [1.0.0-beta.8](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-04-13)
+
+
+### Features
+
+* edgegap clear all my deployments ([8d8effa](https://github.com/PurrNet/PurrServices/commit/8d8effab9625ec6dd6bc342a35c649f522423a1a))
+
 # [1.0.0-beta.7](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-04-10)
 
 
