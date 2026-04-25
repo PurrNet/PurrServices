@@ -1,3 +1,10 @@
+# [1.0.0-beta.13](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-04-25)
+
+
+### Bug Fixes
+
+* Telemetry setup with application constants ([df635f3](https://github.com/PurrNet/PurrServices/commit/df635f376ddf9385494b6da4414537cd78ad514d))
+
 # [1.0.0-beta.12](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-04-25)
 
 
