@@ -1,3 +1,10 @@
+# [1.0.0-beta.12](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-04-25)
+
+
+### Bug Fixes
+
+* Added a bunch of safety features ([4088fb0](https://github.com/PurrNet/PurrServices/commit/4088fb0a79bcd237f739ff773faf5828822e28a4))
+
 # [1.0.0-beta.11](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-04-25)
 
 
