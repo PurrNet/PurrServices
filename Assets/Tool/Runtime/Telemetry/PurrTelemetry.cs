@@ -13,15 +13,8 @@ namespace PurrNet.Services.Telemetry
         {
             get
             {
-                try
-                {
-                    var cfg = PurrTelemetryConfig.Load();
-                    return cfg != null && cfg.isReady;
-                }
-                catch
-                {
-                    return false;
-                }
+                try { return PurrTelemetrySettings.isLinked; }
+                catch { return false; }
             }
         }
 

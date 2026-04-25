@@ -14,7 +14,6 @@ namespace PurrNet.Services.Telemetry
     internal static class PurrTelemetrySender
     {
         const string EventsPath = "/api/services/telemetry/events";
-        const int MaxBatchSize = 50;
 
         static readonly object _lock = new();
         static readonly List<EventPayload> _buffer = new();
@@ -39,8 +38,7 @@ namespace PurrNet.Services.Telemetry
         {
             try
             {
-                var cfg = PurrTelemetryConfig.Load();
-                if (cfg == null || !cfg.isReady) return;
+                if (!PurrTelemetrySettings.isLinked) return;
 
                 EnsureRunner();
                 TryReplayPersisted();
@@ -55,8 +53,7 @@ namespace PurrNet.Services.Telemetry
         {
             try
             {
-                var cfg = PurrTelemetryConfig.Load();
-                if (cfg == null || !cfg.isReady) return;
+                if (!PurrTelemetrySettings.isLinked) return;
 
                 if (string.IsNullOrEmpty(eventName)) return;
                 var trimmed = eventName.Trim();
@@ -74,7 +71,7 @@ namespace PurrNet.Services.Telemetry
                 lock (_lock)
                 {
                     _buffer.Add(ev);
-                    overThreshold = _buffer.Count >= cfg.flushBatchThreshold;
+                    overThreshold = _buffer.Count >= PurrTelemetrySettings.FlushBatchThreshold;
                 }
 
                 if (overThreshold)
@@ -113,13 +110,8 @@ namespace PurrNet.Services.Telemetry
 
         internal static void TickFromRunner(float deltaTime)
         {
-            PurrTelemetryConfig cfg;
-            try { cfg = PurrTelemetryConfig.Load(); }
-            catch { return; }
-            if (cfg == null) return;
-
             _intervalAccumulator += deltaTime;
-            bool intervalElapsed = _intervalAccumulator >= cfg.flushIntervalSeconds;
+            bool intervalElapsed = _intervalAccumulator >= PurrTelemetrySettings.FlushIntervalSeconds;
 
             int bufferCount;
             lock (_lock) bufferCount = _buffer.Count;
@@ -140,17 +132,7 @@ namespace PurrNet.Services.Telemetry
         {
             if (_flushInFlight) return;
 
-            PurrTelemetryConfig cfg;
-            try
-            {
-                cfg = PurrTelemetryConfig.Load();
-                if (cfg == null || !cfg.isReady) return;
-            }
-            catch (Exception e)
-            {
-                PurrTelemetry.LogIfEditor(e);
-                return;
-            }
+            if (!PurrTelemetrySettings.isLinked) return;
 
             _flushInFlight = true;
             try
@@ -161,7 +143,7 @@ namespace PurrNet.Services.Telemetry
                     lock (_lock)
                     {
                         if (_buffer.Count == 0) return;
-                        int take = Math.Min(MaxBatchSize, _buffer.Count);
+                        int take = Math.Min(PurrTelemetrySettings.MaxBatchSize, _buffer.Count);
                         batch = new EventPayload[take];
                         _buffer.CopyTo(0, batch, 0, take);
                         _buffer.RemoveRange(0, take);
@@ -169,7 +151,7 @@ namespace PurrNet.Services.Telemetry
 
                     try
                     {
-                        await SendBatchAsync(cfg, batch);
+                        await SendBatchAsync(batch);
                     }
                     catch (Exception e)
                     {
@@ -183,9 +165,10 @@ namespace PurrNet.Services.Telemetry
             }
         }
 
-        static async Task SendBatchAsync(PurrTelemetryConfig cfg, EventPayload[] batch)
+        static async Task SendBatchAsync(EventPayload[] batch)
         {
-            var url = cfg.baseUrl.TrimEnd('/') + EventsPath;
+            var url = PurrTelemetrySettings.baseUrl.TrimEnd('/') + EventsPath;
+            var publicKey = PurrTelemetrySettings.publicKey;
 
             byte[] bytes;
             try
@@ -200,7 +183,7 @@ namespace PurrNet.Services.Telemetry
                 return;
             }
 
-            for (int attempt = 0; attempt < cfg.maxRetries; attempt++)
+            for (int attempt = 0; attempt < PurrTelemetrySettings.MaxRetries; attempt++)
             {
                 using var req = new UnityWebRequest(url, "POST")
                 {
@@ -208,7 +191,7 @@ namespace PurrNet.Services.Telemetry
                     downloadHandler = new DownloadHandlerBuffer()
                 };
                 req.SetRequestHeader("Content-Type", "application/json");
-                req.SetRequestHeader("Authorization", $"Bearer {cfg.publicKey}");
+                req.SetRequestHeader("Authorization", $"Bearer {publicKey}");
 
                 try
                 {
@@ -221,11 +204,7 @@ namespace PurrNet.Services.Telemetry
                 int status = (int)req.responseCode;
 
                 if (status >= 200 && status < 300)
-                {
-                    if (cfg.verboseLogs)
-                        Debug.Log($"[PurrTelemetry] Sent {batch.Length} event(s).");
                     return;
-                }
 
                 if (status == 401)
                 {
@@ -244,7 +223,7 @@ namespace PurrNet.Services.Telemetry
                     return;
                 }
 
-                if (attempt + 1 < cfg.maxRetries)
+                if (attempt + 1 < PurrTelemetrySettings.MaxRetries)
                 {
                     int delayMs = ComputeBackoffMs(attempt);
                     await Task.Delay(delayMs);
@@ -252,7 +231,7 @@ namespace PurrNet.Services.Telemetry
                 }
 
                 if (Application.isEditor)
-                    Debug.LogWarning($"[PurrTelemetry] Giving up after {cfg.maxRetries} attempts (status {status}).");
+                    Debug.LogWarning($"[PurrTelemetry] Giving up after {PurrTelemetrySettings.MaxRetries} attempts (status {status}).");
                 return;
             }
         }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using PurrNet.Editor;
 using PurrNet.Services.Telemetry;
+using PurrNet.Utils;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -13,7 +14,6 @@ namespace PurrNet.Services.Editor.Telemetry
     {
         PurrUserProfile _profile;
         ProjectInfo[] _projects;
-        PurrTelemetryConfig _config;
         string _error;
         bool _isBusy;
         Vector2 _scrollPos;
@@ -46,8 +46,6 @@ namespace PurrNet.Services.Editor.Telemetry
             _profile = new PurrUserProfile(Repaint);
             _profile.Refresh();
             PurrPackageManagerAuth.onAuthChanged += OnAuthChanged;
-
-            _config = PurrTelemetryConfigLocator.Find();
 
             if (PurrPackageManagerAuth.IsLoggedIn)
                 RefreshProjects();
@@ -133,8 +131,6 @@ namespace PurrNet.Services.Editor.Telemetry
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             EditorGUILayout.Space(8);
 
-            DrawConfigSection();
-            EditorGUILayout.Space(12);
             DrawProjectSection();
 
             EditorGUILayout.EndScrollView();
@@ -152,10 +148,10 @@ namespace PurrNet.Services.Editor.Telemetry
             var labelRect = new Rect(logoRect.xMax + 8, headerRect.y + 4, 220, 20);
             GUI.Label(labelRect, "PurrTelemetry", new GUIStyle(EditorStyles.boldLabel) { fontSize = 14 });
 
-            if (_config != null && _config.isLinked)
+            if (PurrTelemetrySettings.isLinked)
             {
                 var linkedRect = new Rect(labelRect.x, labelRect.yMax - 2, 220, 16);
-                GUI.Label(linkedRect, _config.projectName, _smallLabelStyle);
+                GUI.Label(linkedRect, PurrTelemetrySettings.projectName, _smallLabelStyle);
             }
 
             var refreshRect = new Rect(headerRect.xMax - 78, headerRect.y + 10, 68, 22);
@@ -177,33 +173,6 @@ namespace PurrNet.Services.Editor.Telemetry
             EditorGUI.DrawRect(rect, SEPARATOR_COLOR);
         }
 
-        void DrawConfigSection()
-        {
-            EditorGUILayout.LabelField("Config Asset", _titleStyle);
-            EditorGUILayout.Space(4);
-
-            if (_config == null)
-            {
-                EditorGUILayout.LabelField("No telemetry config found in this project.", _bodyStyle);
-                EditorGUILayout.Space(4);
-                if (GUILayout.Button("Create Config", GUILayout.Height(24), GUILayout.Width(140)))
-                {
-                    _config = PurrTelemetryConfigLocator.FindOrCreate();
-                    Repaint();
-                }
-                return;
-            }
-
-            EditorGUILayout.ObjectField(_config, typeof(PurrTelemetryConfig), false);
-
-            if (!PurrTelemetryConfigLocator.IsInResourcesFolder(_config))
-            {
-                EditorGUILayout.HelpBox(
-                    "Config must live inside a Resources folder for the runtime to load it.",
-                    MessageType.Warning);
-            }
-        }
-
         void DrawProjectSection()
         {
             EditorGUILayout.LabelField("Project", _titleStyle);
@@ -218,7 +187,7 @@ namespace PurrNet.Services.Editor.Telemetry
             else
                 DrawLoginPrompt();
 
-            if (_config != null && _config.isLinked)
+            if (PurrTelemetrySettings.isLinked)
             {
                 EditorGUILayout.Space(8);
                 using (new EditorGUILayout.HorizontalScope())
@@ -229,14 +198,14 @@ namespace PurrNet.Services.Editor.Telemetry
                     GUI.color = Color.white;
 
                     if (GUILayout.Button("Open Dashboard", GUILayout.Height(24)))
-                        Application.OpenURL($"{DASHBOARD_URL}/{_config.projectId}/telemetry");
+                        Application.OpenURL($"{DASHBOARD_URL}/{PurrTelemetrySettings.projectId}/telemetry");
                 }
             }
         }
 
         void DrawLinkedProjectSummary()
         {
-            if (_config == null || !_config.isLinked)
+            if (!PurrTelemetrySettings.isLinked)
             {
                 EditorGUILayout.LabelField("No project linked.", _bodyStyle);
                 return;
@@ -247,9 +216,9 @@ namespace PurrNet.Services.Editor.Telemetry
                 using (new EditorGUILayout.VerticalScope())
                 {
                     GUI.color = LINKED_COLOR;
-                    EditorGUILayout.LabelField(_config.projectName, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(PurrTelemetrySettings.projectName, EditorStyles.boldLabel);
                     GUI.color = Color.white;
-                    EditorGUILayout.LabelField($"id: {_config.projectId}", _smallLabelStyle);
+                    EditorGUILayout.LabelField($"id: {PurrTelemetrySettings.projectId}", _smallLabelStyle);
                 }
             }
         }
@@ -258,7 +227,7 @@ namespace PurrNet.Services.Editor.Telemetry
         {
             EditorGUILayout.HelpBox(
                 "Login with Discord to change which project this Unity project sends telemetry to. " +
-                "Runtime sends and Send Test Event work for everyone using the committed config.",
+                "Runtime sends and Send Test Event work for everyone using the committed link.",
                 MessageType.Info);
 
             using (new EditorGUILayout.HorizontalScope())
@@ -294,11 +263,12 @@ namespace PurrNet.Services.Editor.Telemetry
 
             int currentIndex = 0;
             string[] names = new[] { "—" }.Concat(_projects.Select(p => p.name)).ToArray();
-            if (_config != null && _config.isLinked)
+            var linkedId = PurrTelemetrySettings.projectId;
+            if (!string.IsNullOrEmpty(linkedId))
             {
                 for (int i = 0; i < _projects.Length; i++)
                 {
-                    if (_projects[i].id == _config.projectId)
+                    if (_projects[i].id == linkedId)
                     {
                         currentIndex = i + 1;
                         break;
@@ -318,31 +288,27 @@ namespace PurrNet.Services.Editor.Telemetry
 
         void LinkProject(ProjectInfo project)
         {
-            if (_config == null)
-                _config = PurrTelemetryConfigLocator.FindOrCreate();
-
-            _config.EditorSetProject(project.id, project.publicKey, project.name);
-            AssetDatabase.SaveAssets();
-            PurrTelemetryConfig.InvalidateCache();
+            ApplicationConstants.Set(PurrTelemetrySettings.KeyProjectId, project.id);
+            ApplicationConstants.Set(PurrTelemetrySettings.KeyPublicKey, project.publicKey);
+            ApplicationConstants.Set(PurrTelemetrySettings.KeyProjectName, project.name);
             Repaint();
         }
 
         void UnlinkProject()
         {
-            if (_config == null) return;
-            _config.EditorClearProject();
-            AssetDatabase.SaveAssets();
-            PurrTelemetryConfig.InvalidateCache();
+            ApplicationConstants.Delete(PurrTelemetrySettings.KeyProjectId);
+            ApplicationConstants.Delete(PurrTelemetrySettings.KeyPublicKey);
+            ApplicationConstants.Delete(PurrTelemetrySettings.KeyProjectName);
             Repaint();
         }
 
         async void SendTestEvent()
         {
-            if (_config == null || !_config.isLinked) return;
+            if (!PurrTelemetrySettings.isLinked) return;
 
             try
             {
-                var url = _config.baseUrl.TrimEnd('/') + "/api/services/telemetry/events";
+                var url = PurrTelemetrySettings.baseUrl.TrimEnd('/') + "/api/services/telemetry/events";
                 var body = "{\"event_name\":\"_sdk_test\",\"properties\":{\"sent_from\":\"editor\"},\"source\":\"editor\"}";
 
                 using var req = new UnityWebRequest(url, "POST")
@@ -351,7 +317,7 @@ namespace PurrNet.Services.Editor.Telemetry
                     downloadHandler = new DownloadHandlerBuffer()
                 };
                 req.SetRequestHeader("Content-Type", "application/json");
-                req.SetRequestHeader("Authorization", $"Bearer {_config.publicKey}");
+                req.SetRequestHeader("Authorization", $"Bearer {PurrTelemetrySettings.publicKey}");
 
                 await req.SendWebRequest();
 
@@ -363,24 +329,6 @@ namespace PurrNet.Services.Editor.Telemetry
             catch (Exception e)
             {
                 Debug.LogWarning($"[PurrTelemetry] Test event error: {e.Message}");
-            }
-        }
-
-        void DrawCenteredMessage(string text)
-        {
-            EditorGUILayout.Space(40);
-            var style = new GUIStyle(EditorStyles.centeredGreyMiniLabel) { fontSize = 12 };
-            GUILayout.Label(text, style);
-        }
-
-        void DrawCenteredButton(string text, Action action)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(text, GUILayout.Height(28), GUILayout.Width(180)))
-                    action?.Invoke();
-                GUILayout.FlexibleSpace();
             }
         }
     }
