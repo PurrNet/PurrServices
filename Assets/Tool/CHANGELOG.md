@@ -1,3 +1,10 @@
+# [1.0.0-beta.10](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-04-25)
+
+
+### Bug Fixes
+
+* Improved handling with version control ([33032ba](https://github.com/PurrNet/PurrServices/commit/33032bacc7a2aa040921e3066867afcf193ab80b))
+
 # [1.0.0-beta.9](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-04-25)
 
 
