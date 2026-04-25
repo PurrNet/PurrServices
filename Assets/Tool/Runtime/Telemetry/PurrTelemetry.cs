@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -12,8 +13,15 @@ namespace PurrNet.Services.Telemetry
         {
             get
             {
-                var cfg = PurrTelemetryConfig.Load();
-                return cfg != null && cfg.isReady;
+                try
+                {
+                    var cfg = PurrTelemetryConfig.Load();
+                    return cfg != null && cfg.isReady;
+                }
+                catch
+                {
+                    return false;
+                }
             }
         }
 
@@ -27,14 +35,22 @@ namespace PurrNet.Services.Telemetry
 
         public static void Track(string eventName)
         {
-            if (string.IsNullOrEmpty(eventName)) return;
-            PurrTelemetrySender.Enqueue(eventName, null);
+            try
+            {
+                if (string.IsNullOrEmpty(eventName)) return;
+                PurrTelemetrySender.Enqueue(eventName, null);
+            }
+            catch (Exception e) { LogIfEditor(e); }
         }
 
         public static void Track(string eventName, IReadOnlyDictionary<string, object> properties)
         {
-            if (string.IsNullOrEmpty(eventName)) return;
-            PurrTelemetrySender.Enqueue(eventName, properties);
+            try
+            {
+                if (string.IsNullOrEmpty(eventName)) return;
+                PurrTelemetrySender.Enqueue(eventName, properties);
+            }
+            catch (Exception e) { LogIfEditor(e); }
         }
 
         public static void Track(string eventName, PurrTelemetryProps properties)
@@ -44,14 +60,29 @@ namespace PurrNet.Services.Telemetry
                 if (string.IsNullOrEmpty(eventName)) return;
                 PurrTelemetrySender.Enqueue(eventName, properties.RawDictionary);
             }
+            catch (Exception e) { LogIfEditor(e); }
             finally
             {
-                properties.Dispose();
+                try { properties.Dispose(); } catch { }
             }
         }
 
-        public static Task FlushAsync() => PurrTelemetrySender.FlushAsync();
+        public static Task FlushAsync()
+        {
+            try { return PurrTelemetrySender.FlushAsync(); }
+            catch (Exception e) { LogIfEditor(e); return Task.CompletedTask; }
+        }
 
-        public static void Flush() => _ = PurrTelemetrySender.FlushAsync();
+        public static void Flush()
+        {
+            try { _ = PurrTelemetrySender.FlushAsync(); }
+            catch (Exception e) { LogIfEditor(e); }
+        }
+
+        internal static void LogIfEditor(Exception e)
+        {
+            if (Application.isEditor)
+                Debug.LogWarning($"[PurrTelemetry] {e}");
+        }
     }
 }

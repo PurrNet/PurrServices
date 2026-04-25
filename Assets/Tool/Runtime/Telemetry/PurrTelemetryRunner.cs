@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace PurrNet.Services.Telemetry
@@ -7,19 +8,28 @@ namespace PurrNet.Services.Telemetry
     {
         void Update()
         {
-            PurrTelemetrySender.TickFromRunner(Time.unscaledDeltaTime);
+            try { PurrTelemetrySender.TickFromRunner(Time.unscaledDeltaTime); }
+            catch (Exception e) { PurrTelemetry.LogIfEditor(e); }
         }
 
         void OnApplicationPause(bool paused)
         {
-            if (paused)
-                _ = PurrTelemetrySender.FlushAsync();
+            try
+            {
+                if (paused)
+                    _ = PurrTelemetrySender.FlushAsync();
+            }
+            catch (Exception e) { PurrTelemetry.LogIfEditor(e); }
         }
 
         void OnApplicationQuit()
         {
-            _ = PurrTelemetrySender.FlushAsync();
-            PurrTelemetrySender.PersistPending();
+            try
+            {
+                _ = PurrTelemetrySender.FlushAsync();
+                PurrTelemetrySender.PersistPending();
+            }
+            catch (Exception e) { PurrTelemetry.LogIfEditor(e); }
         }
     }
 }

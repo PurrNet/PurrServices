@@ -37,41 +37,56 @@ namespace PurrNet.Services.Telemetry
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void RuntimeInit()
         {
-            var cfg = PurrTelemetryConfig.Load();
-            if (cfg == null || !cfg.isReady) return;
+            try
+            {
+                var cfg = PurrTelemetryConfig.Load();
+                if (cfg == null || !cfg.isReady) return;
 
-            EnsureRunner();
-            TryReplayPersisted();
+                EnsureRunner();
+                TryReplayPersisted();
+            }
+            catch (Exception e)
+            {
+                PurrTelemetry.LogIfEditor(e);
+            }
         }
 
         public static void Enqueue(string eventName, IReadOnlyDictionary<string, object> props)
         {
-            var cfg = PurrTelemetryConfig.Load();
-            if (cfg == null || !cfg.isReady) return;
-
-            var trimmed = eventName.Trim();
-            if (trimmed.Length == 0 || trimmed.Length > 128) return;
-
-            var ev = new EventPayload
+            try
             {
-                EventName = trimmed,
-                Properties = CopyProperties(props),
-                Source = PurrTelemetry.CurrentSource,
-                OccurredAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
-            };
+                var cfg = PurrTelemetryConfig.Load();
+                if (cfg == null || !cfg.isReady) return;
 
-            bool overThreshold;
-            lock (_lock)
-            {
-                _buffer.Add(ev);
-                overThreshold = _buffer.Count >= cfg.flushBatchThreshold;
+                if (string.IsNullOrEmpty(eventName)) return;
+                var trimmed = eventName.Trim();
+                if (trimmed.Length == 0 || trimmed.Length > 128) return;
+
+                var ev = new EventPayload
+                {
+                    EventName = trimmed,
+                    Properties = CopyProperties(props),
+                    Source = PurrTelemetry.CurrentSource,
+                    OccurredAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+                };
+
+                bool overThreshold;
+                lock (_lock)
+                {
+                    _buffer.Add(ev);
+                    overThreshold = _buffer.Count >= cfg.flushBatchThreshold;
+                }
+
+                if (overThreshold)
+                    _flushRequested = true;
+
+                if (_runner == null && IsMainThread())
+                    EnsureRunner();
             }
-
-            if (overThreshold)
-                _flushRequested = true;
-
-            if (_runner == null && IsMainThread())
-                EnsureRunner();
+            catch (Exception e)
+            {
+                PurrTelemetry.LogIfEditor(e);
+            }
         }
 
         static Dictionary<string, object> CopyProperties(IReadOnlyDictionary<string, object> props)
@@ -98,7 +113,9 @@ namespace PurrNet.Services.Telemetry
 
         internal static void TickFromRunner(float deltaTime)
         {
-            var cfg = PurrTelemetryConfig.Load();
+            PurrTelemetryConfig cfg;
+            try { cfg = PurrTelemetryConfig.Load(); }
+            catch { return; }
             if (cfg == null) return;
 
             _intervalAccumulator += deltaTime;
@@ -123,8 +140,17 @@ namespace PurrNet.Services.Telemetry
         {
             if (_flushInFlight) return;
 
-            var cfg = PurrTelemetryConfig.Load();
-            if (cfg == null || !cfg.isReady) return;
+            PurrTelemetryConfig cfg;
+            try
+            {
+                cfg = PurrTelemetryConfig.Load();
+                if (cfg == null || !cfg.isReady) return;
+            }
+            catch (Exception e)
+            {
+                PurrTelemetry.LogIfEditor(e);
+                return;
+            }
 
             _flushInFlight = true;
             try
@@ -141,7 +167,14 @@ namespace PurrNet.Services.Telemetry
                         _buffer.RemoveRange(0, take);
                     }
 
-                    await SendBatchAsync(cfg, batch);
+                    try
+                    {
+                        await SendBatchAsync(cfg, batch);
+                    }
+                    catch (Exception e)
+                    {
+                        PurrTelemetry.LogIfEditor(e);
+                    }
                 }
             }
             finally
@@ -153,9 +186,19 @@ namespace PurrNet.Services.Telemetry
         static async Task SendBatchAsync(PurrTelemetryConfig cfg, EventPayload[] batch)
         {
             var url = cfg.baseUrl.TrimEnd('/') + EventsPath;
-            var body = JsonConvert.SerializeObject(new BatchBody { Events = batch },
-                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            var bytes = Encoding.UTF8.GetBytes(body);
+
+            byte[] bytes;
+            try
+            {
+                var body = JsonConvert.SerializeObject(new BatchBody { Events = batch },
+                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                bytes = Encoding.UTF8.GetBytes(body);
+            }
+            catch (Exception e)
+            {
+                PurrTelemetry.LogIfEditor(e);
+                return;
+            }
 
             for (int attempt = 0; attempt < cfg.maxRetries; attempt++)
             {
