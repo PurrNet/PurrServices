@@ -130,14 +130,6 @@ namespace PurrNet.Services.Editor.Telemetry
             DrawHeader();
             DrawSeparator();
 
-            if (!PurrPackageManagerAuth.IsLoggedIn)
-            {
-                DrawCenteredMessage("Sign in to manage telemetry.");
-                GUILayout.Space(4);
-                DrawCenteredButton("Login with Discord", PurrPackageManagerAuth.Login);
-                return;
-            }
-
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             EditorGUILayout.Space(8);
 
@@ -202,12 +194,7 @@ namespace PurrNet.Services.Editor.Telemetry
                 return;
             }
 
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.ObjectField(_config, typeof(PurrTelemetryConfig), false);
-                if (GUILayout.Button("Ping", GUILayout.Width(50)))
-                    EditorGUIUtility.PingObject(_config);
-            }
+            EditorGUILayout.ObjectField(_config, typeof(PurrTelemetryConfig), false);
 
             if (!PurrTelemetryConfigLocator.IsInResourcesFolder(_config))
             {
@@ -222,6 +209,67 @@ namespace PurrNet.Services.Editor.Telemetry
             EditorGUILayout.LabelField("Project", _titleStyle);
             EditorGUILayout.Space(4);
 
+            DrawLinkedProjectSummary();
+
+            EditorGUILayout.Space(8);
+
+            if (PurrPackageManagerAuth.IsLoggedIn)
+                DrawProjectPicker();
+            else
+                DrawLoginPrompt();
+
+            if (_config != null && _config.isLinked)
+            {
+                EditorGUILayout.Space(8);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUI.color = ACCENT_COLOR;
+                    if (GUILayout.Button("Send Test Event", GUILayout.Height(24)))
+                        SendTestEvent();
+                    GUI.color = Color.white;
+
+                    if (GUILayout.Button("Open Dashboard", GUILayout.Height(24)))
+                        Application.OpenURL($"{DASHBOARD_URL}/{_config.projectId}/telemetry");
+                }
+            }
+        }
+
+        void DrawLinkedProjectSummary()
+        {
+            if (_config == null || !_config.isLinked)
+            {
+                EditorGUILayout.LabelField("No project linked.", _bodyStyle);
+                return;
+            }
+
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    GUI.color = LINKED_COLOR;
+                    EditorGUILayout.LabelField(_config.projectName, EditorStyles.boldLabel);
+                    GUI.color = Color.white;
+                    EditorGUILayout.LabelField($"id: {_config.projectId}", _smallLabelStyle);
+                }
+            }
+        }
+
+        void DrawLoginPrompt()
+        {
+            EditorGUILayout.HelpBox(
+                "Login with Discord to change which project this Unity project sends telemetry to. " +
+                "Runtime sends and Send Test Event work for everyone using the committed config.",
+                MessageType.Info);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Login with Discord", GUILayout.Height(22), GUILayout.Width(180)))
+                    PurrPackageManagerAuth.Login();
+            }
+        }
+
+        void DrawProjectPicker()
+        {
             if (_error != null)
             {
                 EditorGUILayout.HelpBox(_error, MessageType.Error);
@@ -258,32 +306,13 @@ namespace PurrNet.Services.Editor.Telemetry
                 }
             }
 
-            int picked = EditorGUILayout.Popup("Linked Project", currentIndex, names);
+            int picked = EditorGUILayout.Popup("Change Linked Project", currentIndex, names);
             if (picked != currentIndex)
             {
                 if (picked == 0)
                     UnlinkProject();
                 else
                     LinkProject(_projects[picked - 1]);
-            }
-
-            if (_config == null || !_config.isLinked)
-            {
-                EditorGUILayout.LabelField("Pick a project to enable telemetry in this Unity project.", _bodyStyle);
-                return;
-            }
-
-            EditorGUILayout.Space(8);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUI.color = ACCENT_COLOR;
-                if (GUILayout.Button("Send Test Event", GUILayout.Height(24)))
-                    SendTestEvent();
-                GUI.color = Color.white;
-
-                if (GUILayout.Button("Open Dashboard", GUILayout.Height(24)))
-                    Application.OpenURL($"{DASHBOARD_URL}/{_config.projectId}/telemetry");
             }
         }
 
