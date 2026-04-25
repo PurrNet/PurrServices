@@ -1,3 +1,10 @@
+# [1.0.0-beta.9](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-04-25)
+
+
+### Features
+
+* PurrTelemetry ([7230866](https://github.com/PurrNet/PurrServices/commit/723086628cb7724ae9448e7aa1b6de8fc3ca9f54))
+
 # [1.0.0-beta.8](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-04-13)
 
 
