@@ -1,3 +1,10 @@
+# [1.0.0-beta.11](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-04-25)
+
+
+### Bug Fixes
+
+* Less intrusive config location ([ca13a94](https://github.com/PurrNet/PurrServices/commit/ca13a9403a708e46a5580c9f19638cc60602c01c))
+
 # [1.0.0-beta.10](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-04-25)
 
 
