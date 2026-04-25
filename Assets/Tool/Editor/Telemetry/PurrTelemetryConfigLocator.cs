@@ -7,7 +7,7 @@ namespace PurrNet.Services.Editor.Telemetry
 {
     internal static class PurrTelemetryConfigLocator
     {
-        const string DefaultDirectory = "Assets/PurrServices/Resources";
+        const string DefaultDirectory = "Assets/Resources/PurrServices";
         const string DefaultAssetName = "PurrTelemetryConfig.asset";
 
         public static PurrTelemetryConfig FindOrCreate()

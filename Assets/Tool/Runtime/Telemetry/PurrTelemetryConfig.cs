@@ -4,7 +4,7 @@ namespace PurrNet.Services.Telemetry
 {
     public class PurrTelemetryConfig : ScriptableObject
     {
-        public const string ResourceName = "PurrTelemetryConfig";
+        public const string ResourceName = "PurrServices/PurrTelemetryConfig";
         public const string DefaultBaseUrl = "https://purrnet.dev";
 
         [SerializeField] string _baseUrl = DefaultBaseUrl;
