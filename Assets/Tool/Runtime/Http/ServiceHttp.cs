@@ -19,6 +19,8 @@ namespace PurrNet.Services
         readonly Func<string> _getBaseUrl;
         readonly Func<string> _getApiKey;
         readonly Func<string> _getGameId;
+        readonly Func<string> _getEnvironmentScope;
+        readonly Func<string> _getLobbyCompatibility;
         readonly Func<string> _getSessionToken;
         readonly Func<string> _getPlayerToken;
 
@@ -26,12 +28,16 @@ namespace PurrNet.Services
             Func<string> getBaseUrl,
             Func<string> getApiKey,
             Func<string> getGameId,
+            Func<string> getEnvironmentScope,
+            Func<string> getLobbyCompatibility,
             Func<string> getSessionToken,
             Func<string> getPlayerToken)
         {
             _getBaseUrl = getBaseUrl;
             _getApiKey = getApiKey;
             _getGameId = getGameId;
+            _getEnvironmentScope = getEnvironmentScope;
+            _getLobbyCompatibility = getLobbyCompatibility;
             _getSessionToken = getSessionToken;
             _getPlayerToken = getPlayerToken;
         }
@@ -57,6 +63,9 @@ namespace PurrNet.Services
                 if (!string.IsNullOrEmpty(gameId))
                     request.SetRequestHeader("X-Game-Id", gameId);
             }
+
+            request.SetRequestHeader("X-Purr-Scope", _getEnvironmentScope());
+            request.SetRequestHeader("X-Purr-Lobby-Compatibility", _getLobbyCompatibility());
 
             var session = _getSessionToken();
             if (!string.IsNullOrEmpty(session))

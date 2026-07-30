@@ -29,7 +29,13 @@ https://github.com/PurrNet/PurrServices.git?path=Assets/Tool#dev
 
 ## Quick Start
 
-1. Add the `PurrServices` component to a GameObject in your scene. It acts as a singleton and provides access to all services. With no project selected, lobby and device authentication use the free development tier automatically, namespaced by Unity's `Application.identifier`. This tier is not intended for production; create and link a project before releasing your game.
+1. Open **Tools > PurrNet > PurrServices**. PurrServices initializes automatically at runtime, so no scene component is required. With no project linked, lobby and device authentication use the free development tier automatically, namespaced by Unity's `Application.identifier`. This tier is not intended for production; create and link a project before releasing your game.
+
+   The selected project key and service URL are stored through PurrNet's `ApplicationConstants` and compiled into player builds.
+
+   Player builds and the Unity Editor have separate profiles. Each app remembers its own environment scope within each profile, defaulting to `production` for builds and `editor` in the Unity Editor. The Editor can instead use the build profile or a different linked project.
+
+   Lobby compatibility is derived from `Application.version` and enforced by listing, quick join, direct join, join codes, polling, and WebSocket connections.
 
 2. **Authenticate:**
 ```csharp

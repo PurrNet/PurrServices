@@ -3,29 +3,51 @@ using UnityEngine;
 
 namespace PurrNet.Services
 {
-    [AddComponentMenu("PurrNet/PurrServices")]
+    [AddComponentMenu("")]
+    [DisallowMultipleComponent]
     [DefaultExecutionOrder(-100)]
     public class PurrServices : MonoBehaviour
     {
-        [SerializeField] string _serverUrl = "https://purrnet.dev";
-        [SerializeField] string _apiKey;
+        string _serverUrl;
+        string _apiKey;
+        string _environmentScope;
+        string _lobbyCompatibility;
 
         static PurrServices _instance;
+        bool _initialized;
 
-        public static PurrServices instance
+        public static PurrServices instance => EnsureInstance();
+
+        static PurrServices EnsureInstance()
         {
-            get
+            if (_instance)
+                return _instance;
+
+            _instance = FindAnyObjectByType<PurrServices>();
+            if (_instance)
             {
-                if (_instance)
-                    return _instance;
-
-                _instance = FindAnyObjectByType<PurrServices>();
-
-                if (_instance)
-                    return _instance;
-
-                throw new System.Exception("No `PurrServices` instance found in the scene.");
+                _instance.EnsureInitialized();
+                return _instance;
             }
+
+            var host = new GameObject("[PurrServices]")
+            {
+                hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSave
+            };
+            _instance = host.AddComponent<PurrServices>();
+            return _instance;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _instance = null;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void Bootstrap()
+        {
+            EnsureInstance();
         }
 
         ServiceHttp _http;
@@ -44,6 +66,9 @@ namespace PurrNet.Services
         public string playerName => _auth?.displayName;
         public string serverUrl => _serverUrl;
         public string gameId => Application.identifier;
+        public string environmentScope => _environmentScope;
+        public string lobbyCompatibility => _lobbyCompatibility;
+        public bool isFreeTier => string.IsNullOrWhiteSpace(_apiKey);
 
         string _activePlayerToken;
 
@@ -57,13 +82,26 @@ namespace PurrNet.Services
         {
             if (_instance != null && _instance != this)
             {
-                Destroy(gameObject);
+                Destroy(this);
                 return;
             }
 
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
+            _serverUrl = PurrServicesSettings.serverUrl;
+            _apiKey = PurrServicesSettings.apiKey;
+            _environmentScope = PurrServicesSettings.environmentScope;
+            _lobbyCompatibility = PurrServicesSettings.lobbyCompatibility;
+            EnsureInitialized();
+        }
+
+        void EnsureInitialized()
+        {
+            if (_initialized)
+                return;
+
+            _initialized = true;
             InitializeServices();
         }
 
@@ -73,6 +111,8 @@ namespace PurrNet.Services
                 () => _serverUrl,
                 () => _apiKey,
                 () => gameId,
+                () => _environmentScope,
+                () => _lobbyCompatibility,
                 () => _auth?.sessionToken,
                 () => _activePlayerToken
             );
@@ -83,6 +123,8 @@ namespace PurrNet.Services
                 _http,
                 () => _apiKey,
                 () => gameId,
+                () => _environmentScope,
+                () => _lobbyCompatibility,
                 () => _auth?.sessionToken,
                 () => _serverUrl
             );
@@ -100,6 +142,9 @@ namespace PurrNet.Services
 
         void OnDestroy()
         {
+            if (_instance != this)
+                return;
+
             for (int i = _connections.Count - 1; i >= 0; i--)
             {
                 _connections[i].Dispose();

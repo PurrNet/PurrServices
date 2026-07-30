@@ -14,7 +14,7 @@ namespace PurrNet.Services
 
         // --- Window state ---
         bool _open;
-        Rect _windowRect = new(20, 20, 620, 520);
+        Rect _windowRect = new(20, 20, 760, 520);
         Tab _tab = Tab.Auth;
 
         // --- Auth fields ---
@@ -297,7 +297,7 @@ namespace PurrNet.Services
                     GUILayout.Label(l.name ?? "—", GUILayout.Width(90));
                     GUILayout.Label(l.joinable ? "Open" : "Closed", GUILayout.Width(60));
                     GUILayout.Label(l.code ?? "—", GUILayout.Width(60));
-                    GUILayout.Label($"v{l.version}", GUILayout.Width(30));
+                    GUILayout.Label($"r{l.revision}", GUILayout.Width(30));
                     if (GUILayout.Button("Join", GUILayout.Width(50)) && !_busy)
                         RunAsync(JoinLobbyAsync(l.id));
                     GUILayout.EndHorizontal();
@@ -410,7 +410,8 @@ namespace PurrNet.Services
             GUILayout.Label($"ID: {lobby.id}");
             GUILayout.Label($"Name: {lobby.name ?? "—"}");
             GUILayout.Label($"Code: {lobby.code ?? "—"}");
-            GUILayout.Label($"Joinable: {lobby.joinable}  |  Version: {lobby.version}");
+            GUILayout.Label($"Joinable: {lobby.joinable}  |  Revision: {lobby.revision}");
+            GUILayout.Label($"Scope: {lobby.scope}  |  Compatibility: {lobby.compatibility}");
             GUILayout.Label($"Host: {lobby.hostPlayerId}  |  Max: {lobby.maxPlayers}");
             GUILayout.Label($"Players: {(_snapshot.players != null ? _snapshot.players.Count : 0)}/{lobby.maxPlayers}");
 
@@ -787,6 +788,8 @@ namespace PurrNet.Services
             GUILayout.Label($"Player: {Truncate(svc.playerId, 10) ?? "—"}", GUILayout.Width(120));
             GUILayout.Label($"Lobby: {(_activeLobbyId != null ? Truncate(_activeLobbyId, 8) : "—")}", GUILayout.Width(110));
             GUILayout.Label($"WS: {connState}", GUILayout.Width(120));
+            GUILayout.Label($"Scope: {svc.environmentScope}", GUILayout.Width(100));
+            GUILayout.Label($"Compat: {svc.lobbyCompatibility}", GUILayout.Width(110));
             GUILayout.EndHorizontal();
         }
 
@@ -840,7 +843,7 @@ namespace PurrNet.Services
             _connection.onSnapshot += snap =>
             {
                 _snapshot = snap;
-                Log($"WS snapshot v{snap.lobby.version}, {snap.players?.Count ?? 0} players");
+                Log($"WS snapshot r{snap.lobby.revision}, {snap.players?.Count ?? 0} players");
             };
 
             _connection.onChat += msg =>

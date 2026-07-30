@@ -20,6 +20,8 @@ namespace PurrNet.Services
         readonly Uri _uri;
         readonly string _apiKey;
         readonly string _gameId;
+        readonly string _environmentScope;
+        readonly string _lobbyCompatibility;
         readonly string _sessionToken;
         readonly string _playerToken;
 
@@ -49,12 +51,16 @@ namespace PurrNet.Services
             Uri uri,
             string apiKey,
             string gameId,
+            string environmentScope,
+            string lobbyCompatibility,
             string sessionToken,
             string playerToken)
         {
             _uri = uri;
             _apiKey = apiKey;
             _gameId = gameId;
+            _environmentScope = environmentScope;
+            _lobbyCompatibility = lobbyCompatibility;
             _sessionToken = sessionToken;
             _playerToken = playerToken;
 
@@ -86,6 +92,8 @@ namespace PurrNet.Services
                 type = "auth",
                 apiKey = useFreeTier ? null : _apiKey.Trim(),
                 gameId = useFreeTier ? _gameId : null,
+                scope = _environmentScope,
+                lobbyCompatibility = _lobbyCompatibility,
                 sessionToken = _sessionToken,
                 playerToken = _playerToken
             };
@@ -201,7 +209,7 @@ namespace PurrNet.Services
             if (snap.players == null)
                 snap.players = new List<LobbyPlayer>();
             snap.players.Add(msg.player);
-            snap.lobby.version = msg.version;
+            snap.lobby.revision = msg.revision;
             currentSnapshot = snap;
             onPlayerJoined?.Invoke(msg.player);
             onSnapshot?.Invoke(currentSnapshot);
@@ -214,7 +222,7 @@ namespace PurrNet.Services
             snap.playerMetadata?.Remove(msg.playerId);
             if (!string.IsNullOrEmpty(msg.newHostPlayerId))
                 snap.lobby.hostPlayerId = msg.newHostPlayerId;
-            snap.lobby.version = msg.version;
+            snap.lobby.revision = msg.revision;
             currentSnapshot = snap;
             onPlayerLeft?.Invoke(msg.playerId, msg.newHostPlayerId);
             onSnapshot?.Invoke(currentSnapshot);
@@ -224,7 +232,7 @@ namespace PurrNet.Services
         {
             var snap = currentSnapshot;
             snap.lobby.joinable = msg.joinable;
-            snap.lobby.version = msg.version;
+            snap.lobby.revision = msg.revision;
             currentSnapshot = snap;
             onJoinableChanged?.Invoke(msg.joinable);
             onSnapshot?.Invoke(currentSnapshot);
@@ -234,7 +242,7 @@ namespace PurrNet.Services
         {
             var snap = currentSnapshot;
             snap.metadata = msg.metadata;
-            snap.lobby.version = msg.version;
+            snap.lobby.revision = msg.revision;
             currentSnapshot = snap;
             onMetadataUpdated?.Invoke(msg.metadata);
             onSnapshot?.Invoke(currentSnapshot);
@@ -246,7 +254,7 @@ namespace PurrNet.Services
             if (snap.playerMetadata == null)
                 snap.playerMetadata = new Dictionary<string, Dictionary<string, string>>();
             snap.playerMetadata[msg.playerId] = msg.metadata;
-            snap.lobby.version = msg.version;
+            snap.lobby.revision = msg.revision;
             currentSnapshot = snap;
             onPlayerMetadataUpdated?.Invoke(msg.playerId, msg.metadata);
             onSnapshot?.Invoke(currentSnapshot);

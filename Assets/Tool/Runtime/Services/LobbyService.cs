@@ -9,6 +9,8 @@ namespace PurrNet.Services
         readonly ServiceHttp _http;
         readonly Func<string> _getApiKey;
         readonly Func<string> _getGameId;
+        readonly Func<string> _getEnvironmentScope;
+        readonly Func<string> _getLobbyCompatibility;
         readonly Func<string> _getSessionToken;
         readonly Func<string> _getServerUrl;
 
@@ -16,12 +18,16 @@ namespace PurrNet.Services
             ServiceHttp http,
             Func<string> getApiKey,
             Func<string> getGameId,
+            Func<string> getEnvironmentScope,
+            Func<string> getLobbyCompatibility,
             Func<string> getSessionToken,
             Func<string> getServerUrl)
         {
             _http = http;
             _getApiKey = getApiKey;
             _getGameId = getGameId;
+            _getEnvironmentScope = getEnvironmentScope;
+            _getLobbyCompatibility = getLobbyCompatibility;
             _getSessionToken = getSessionToken;
             _getServerUrl = getServerUrl;
         }
@@ -63,7 +69,9 @@ namespace PurrNet.Services
                     joinable = data.joinable,
                     code = data.code,
                     chatSeq = data.chatSeq,
-                    version = data.version,
+                    scope = data.scope,
+                    compatibility = data.compatibility,
+                    revision = data.revision,
                     createdAt = data.createdAt
                 }
             };
@@ -316,6 +324,8 @@ namespace PurrNet.Services
                 uri,
                 _getApiKey(),
                 _getGameId(),
+                _getEnvironmentScope(),
+                _getLobbyCompatibility(),
                 _getSessionToken(),
                 playerToken
             );
