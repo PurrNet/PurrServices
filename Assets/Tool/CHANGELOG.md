@@ -1,3 +1,10 @@
+# [1.0.0-beta.15](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-07-30)
+
+
+### Features
+
+* free version ([937eb5d](https://github.com/PurrNet/PurrServices/commit/937eb5de2e32dced6c499077507472d6f31d92d1))
+
 # [1.0.0-beta.14](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-05-15)
 
 
