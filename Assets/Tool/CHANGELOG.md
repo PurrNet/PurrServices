@@ -1,3 +1,37 @@
+# 1.0.0 (2026-07-30)
+
+
+### Bug Fixes
+
+* Added a bunch of safety features ([4088fb0](https://github.com/PurrNet/PurrServices/commit/4088fb0a79bcd237f739ff773faf5828822e28a4))
+* editor specific cookie scope ([bd59e9c](https://github.com/PurrNet/PurrServices/commit/bd59e9c5cdc477493bcd2fce44527b019dc41a68))
+* granular updates instead of sending the ENTIRE state every time ([61d242b](https://github.com/PurrNet/PurrServices/commit/61d242b86088d7b9848febce4c0b0fbcfbb742d3))
+* handle null data array in HandleData method ([eec481d](https://github.com/PurrNet/PurrServices/commit/eec481d064e4c77bf0f8c96fd75d8f61ddacdd17))
+* Improved handling with version control ([33032ba](https://github.com/PurrNet/PurrServices/commit/33032bacc7a2aa040921e3066867afcf193ab80b))
+* instead of lobby state, have a "isJoinabled" boolean ([c98e3d7](https://github.com/PurrNet/PurrServices/commit/c98e3d74835b5d1f085445c0141c94414abeacda))
+* Less intrusive config location ([ca13a94](https://github.com/PurrNet/PurrServices/commit/ca13a9403a708e46a5580c9f19638cc60602c01c))
+* lobby search ([481eecf](https://github.com/PurrNet/PurrServices/commit/481eecf728af9df971a5580f8067370b86739b05))
+* PurrServices API integration and editor setup ([cbf6525](https://github.com/PurrNet/PurrServices/commit/cbf6525a2460b3220b37c260f80b64ca1d35c927))
+* remove rogue meta file ([2142fe8](https://github.com/PurrNet/PurrServices/commit/2142fe8932d344fb89476861eeeda2a8c3557c01))
+* Telemetry setup with application constants ([df635f3](https://github.com/PurrNet/PurrServices/commit/df635f376ddf9385494b6da4414537cd78ad514d))
+* Unified project linking ([a0954d4](https://github.com/PurrNet/PurrServices/commit/a0954d44093248d21d97cee7d0738e0c6d20e9bd))
+
+
+### Features
+
+* add Edgegap service and GUI integration for server deployment ([3f1ea5e](https://github.com/PurrNet/PurrServices/commit/3f1ea5e1b100b17dccba6bf2db2100c5e623ef25))
+* better lobby searching ([afee874](https://github.com/PurrNet/PurrServices/commit/afee87409128a257a056b04bd18fca6fc38eccd9))
+* edgegap clear all my deployments ([8d8effa](https://github.com/PurrNet/PurrServices/commit/8d8effab9625ec6dd6bc342a35c649f522423a1a))
+* free version ([937eb5d](https://github.com/PurrNet/PurrServices/commit/937eb5de2e32dced6c499077507472d6f31d92d1))
+* PurrTelemetry ([7230866](https://github.com/PurrNet/PurrServices/commit/723086628cb7724ae9448e7aa1b6de8fc3ca9f54))
+
+# [1.0.0-beta.16](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-07-30)
+
+
+### Bug Fixes
+
+* remove rogue meta file ([2142fe8](https://github.com/PurrNet/PurrServices/commit/2142fe8932d344fb89476861eeeda2a8c3557c01))
+
 # [1.0.0-beta.15](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-07-30)
 
 
