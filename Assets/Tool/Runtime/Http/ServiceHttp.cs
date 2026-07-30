@@ -18,17 +18,20 @@ namespace PurrNet.Services
     {
         readonly Func<string> _getBaseUrl;
         readonly Func<string> _getApiKey;
+        readonly Func<string> _getGameId;
         readonly Func<string> _getSessionToken;
         readonly Func<string> _getPlayerToken;
 
         public ServiceHttp(
             Func<string> getBaseUrl,
             Func<string> getApiKey,
+            Func<string> getGameId,
             Func<string> getSessionToken,
             Func<string> getPlayerToken)
         {
             _getBaseUrl = getBaseUrl;
             _getApiKey = getApiKey;
+            _getGameId = getGameId;
             _getSessionToken = getSessionToken;
             _getPlayerToken = getPlayerToken;
         }
@@ -43,9 +46,17 @@ namespace PurrNet.Services
         {
             request.SetRequestHeader("Content-Type", "application/json");
 
-            var apiKey = _getApiKey();
+            var apiKey = _getApiKey()?.Trim();
             if (!string.IsNullOrEmpty(apiKey))
+            {
                 request.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+            }
+            else
+            {
+                var gameId = _getGameId();
+                if (!string.IsNullOrEmpty(gameId))
+                    request.SetRequestHeader("X-Game-Id", gameId);
+            }
 
             var session = _getSessionToken();
             if (!string.IsNullOrEmpty(session))

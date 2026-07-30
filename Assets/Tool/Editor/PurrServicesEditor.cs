@@ -9,6 +9,7 @@ namespace PurrNet.Services.Editor
     [CustomEditor(typeof(PurrServices))]
     public class PurrServicesEditor : UnityEditor.Editor
     {
+        const string FreeTierLabel = "Free (Development)";
         static string LinkedProjectIdKey => "PurrServices_LinkedProjectId_" + Application.dataPath;
 
         SerializedProperty _serverUrl;
@@ -22,12 +23,6 @@ namespace PurrNet.Services.Editor
         {
             _serverUrl = serializedObject.FindProperty("_serverUrl");
             _apiKey = serializedObject.FindProperty("_apiKey");
-
-            if (string.IsNullOrEmpty(_apiKey.stringValue) && _cachedLinkedKey != null)
-            {
-                _apiKey.stringValue = _cachedLinkedKey;
-                serializedObject.ApplyModifiedProperties();
-            }
 
             if (PurrPackageManagerAuth.HasApiKey())
                 FetchProjects();
@@ -44,7 +39,7 @@ namespace PurrNet.Services.Editor
                 if (result.Success && result.Value.projects != null)
                 {
                     _projects = result.Value.projects;
-                    _dropdownNames = new[] { "—" }
+                    _dropdownNames = new[] { FreeTierLabel }
                         .Concat(_projects.Select(p => p.name))
                         .ToArray();
                 }
@@ -83,13 +78,18 @@ namespace PurrNet.Services.Editor
                 }
 
                 var selected = EditorGUILayout.Popup("Project", current, _dropdownNames);
-                if (selected != current && selected > 0 && !string.IsNullOrEmpty(_projects[selected - 1].publicKey))
-                    _apiKey.stringValue = _projects[selected - 1].publicKey;
+                if (selected != current)
+                {
+                    if (selected == 0)
+                        _apiKey.stringValue = "";
+                    else if (!string.IsNullOrEmpty(_projects[selected - 1].publicKey))
+                        _apiKey.stringValue = _projects[selected - 1].publicKey;
+                }
             }
             else
             {
                 GUI.enabled = false;
-                EditorGUILayout.Popup("Project", 0, new[] { "—" });
+                EditorGUILayout.Popup("Project", 0, new[] { FreeTierLabel });
                 GUI.enabled = true;
             }
 
@@ -98,7 +98,24 @@ namespace PurrNet.Services.Editor
 
             EditorGUILayout.EndHorizontal();
 
+            if (string.IsNullOrWhiteSpace(_apiKey.stringValue) && IsPurrNetHosted(_serverUrl.stringValue))
+            {
+                EditorGUILayout.HelpBox(
+                    "The default PurrServices tier is intended for development only.\n" +
+                    "Do not use it in production. Create and link a project before release.",
+                    MessageType.Warning);
+            }
+
             serializedObject.ApplyModifiedProperties();
+        }
+
+        static bool IsPurrNetHosted(string serverUrl)
+        {
+            if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri))
+                return false;
+
+            return uri.Host.Equals("purrnet.dev", StringComparison.OrdinalIgnoreCase) ||
+                   uri.Host.EndsWith(".purrnet.dev", StringComparison.OrdinalIgnoreCase);
         }
 
         public static string GetLinkedPublicKey()

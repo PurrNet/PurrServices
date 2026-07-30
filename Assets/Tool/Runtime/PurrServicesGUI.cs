@@ -578,6 +578,9 @@ namespace PurrNet.Services
                 RunAsync(EdgegapDeployAndWaitAsync());
             GUILayout.EndHorizontal();
 
+            if (_deployPolling)
+                GUILayout.Label("Waiting for the deployment to become ready...");
+
             GUILayout.Space(8);
             GUILayout.Label("--- Active Deployment ---");
 
@@ -640,8 +643,15 @@ namespace PurrNet.Services
             Log("Edgegap.DeployAndWaitAsync()");
             _deployPolling = true;
 
-            var r = await PurrServices.instance.edgegap.DeployAndWaitAsync();
-            _deployPolling = false;
+            DeploymentStatusResult r;
+            try
+            {
+                r = await PurrServices.instance.edgegap.DeployAndWaitAsync();
+            }
+            finally
+            {
+                _deployPolling = false;
+            }
 
             if (r.success)
             {

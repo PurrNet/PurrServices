@@ -43,6 +43,7 @@ namespace PurrNet.Services
         public string playerId => _auth?.playerId;
         public string playerName => _auth?.displayName;
         public string serverUrl => _serverUrl;
+        public string gameId => Application.identifier;
 
         string _activePlayerToken;
 
@@ -71,6 +72,7 @@ namespace PurrNet.Services
             _http = new ServiceHttp(
                 () => _serverUrl,
                 () => _apiKey,
+                () => gameId,
                 () => _auth?.sessionToken,
                 () => _activePlayerToken
             );
@@ -80,6 +82,7 @@ namespace PurrNet.Services
             _lobbies = new LobbyService(
                 _http,
                 () => _apiKey,
+                () => gameId,
                 () => _auth?.sessionToken,
                 () => _serverUrl
             );

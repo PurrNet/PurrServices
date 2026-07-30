@@ -8,17 +8,20 @@ namespace PurrNet.Services
     {
         readonly ServiceHttp _http;
         readonly Func<string> _getApiKey;
+        readonly Func<string> _getGameId;
         readonly Func<string> _getSessionToken;
         readonly Func<string> _getServerUrl;
 
         internal LobbyService(
             ServiceHttp http,
             Func<string> getApiKey,
+            Func<string> getGameId,
             Func<string> getSessionToken,
             Func<string> getServerUrl)
         {
             _http = http;
             _getApiKey = getApiKey;
+            _getGameId = getGameId;
             _getSessionToken = getSessionToken;
             _getServerUrl = getServerUrl;
         }
@@ -312,6 +315,7 @@ namespace PurrNet.Services
             return new LobbyConnection(
                 uri,
                 _getApiKey(),
+                _getGameId(),
                 _getSessionToken(),
                 playerToken
             );

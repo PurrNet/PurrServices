@@ -21,6 +21,9 @@ namespace PurrNet.Services
         [JsonProperty("apiKey", NullValueHandling = NullValueHandling.Ignore)]
         public string apiKey;
 
+        [JsonProperty("gameId", NullValueHandling = NullValueHandling.Ignore)]
+        public string gameId;
+
         [JsonProperty("sessionToken")]
         public string sessionToken;
 

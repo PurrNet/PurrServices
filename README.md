@@ -29,7 +29,7 @@ https://github.com/PurrNet/PurrServices.git?path=Assets/Tool#dev
 
 ## Quick Start
 
-1. Add the `PurrServices` component to a GameObject in your scene. It acts as a singleton and provides access to all services.
+1. Add the `PurrServices` component to a GameObject in your scene. It acts as a singleton and provides access to all services. With no project selected, lobby and device authentication use the free development tier automatically, namespaced by Unity's `Application.identifier`. This tier is not intended for production; create and link a project before releasing your game.
 
 2. **Authenticate:**
 ```csharp
