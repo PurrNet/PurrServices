@@ -1,3 +1,52 @@
+# [1.0.0-beta.14](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-05-15)
+
+
+### Bug Fixes
+
+* Unified project linking ([a0954d4](https://github.com/PurrNet/PurrServices/commit/a0954d44093248d21d97cee7d0738e0c6d20e9bd))
+
+# [1.0.0-beta.13](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-04-25)
+
+
+### Bug Fixes
+
+* Telemetry setup with application constants ([df635f3](https://github.com/PurrNet/PurrServices/commit/df635f376ddf9385494b6da4414537cd78ad514d))
+
+# [1.0.0-beta.12](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-04-25)
+
+
+### Bug Fixes
+
+* Added a bunch of safety features ([4088fb0](https://github.com/PurrNet/PurrServices/commit/4088fb0a79bcd237f739ff773faf5828822e28a4))
+
+# [1.0.0-beta.11](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-04-25)
+
+
+### Bug Fixes
+
+* Less intrusive config location ([ca13a94](https://github.com/PurrNet/PurrServices/commit/ca13a9403a708e46a5580c9f19638cc60602c01c))
+
+# [1.0.0-beta.10](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-04-25)
+
+
+### Bug Fixes
+
+* Improved handling with version control ([33032ba](https://github.com/PurrNet/PurrServices/commit/33032bacc7a2aa040921e3066867afcf193ab80b))
+
+# [1.0.0-beta.9](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-04-25)
+
+
+### Features
+
+* PurrTelemetry ([7230866](https://github.com/PurrNet/PurrServices/commit/723086628cb7724ae9448e7aa1b6de8fc3ca9f54))
+
+# [1.0.0-beta.8](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-04-13)
+
+
+### Features
+
+* edgegap clear all my deployments ([8d8effa](https://github.com/PurrNet/PurrServices/commit/8d8effab9625ec6dd6bc342a35c649f522423a1a))
+
 # [1.0.0-beta.7](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-04-10)
 
 

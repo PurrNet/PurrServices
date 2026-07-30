@@ -10,7 +10,6 @@ namespace PurrNet.Services.Editor
     public class PurrServicesEditor : UnityEditor.Editor
     {
         const string FreeTierLabel = "Free (Development)";
-        static string LinkedProjectIdKey => "PurrServices_LinkedProjectId_" + Application.dataPath;
 
         SerializedProperty _serverUrl;
         SerializedProperty _apiKey;
@@ -120,8 +119,14 @@ namespace PurrNet.Services.Editor
 
         public static string GetLinkedPublicKey()
         {
-            var linkedId = EditorPrefs.GetString("PurrServices_LinkedProjectId_" + Application.dataPath, "");
-            if (string.IsNullOrEmpty(linkedId) || !PurrPackageManagerAuth.HasApiKey())
+            var linkedId = PurrServicesProjectLink.projectId;
+            if (string.IsNullOrEmpty(linkedId))
+                return null;
+
+            if (!string.IsNullOrEmpty(PurrServicesProjectLink.publicKey))
+                return PurrServicesProjectLink.publicKey;
+
+            if (!PurrPackageManagerAuth.HasApiKey())
                 return null;
 
             return _cachedLinkedKey;
@@ -141,7 +146,7 @@ namespace PurrNet.Services.Editor
             _cachedLinkedKey = null;
             if (!PurrPackageManagerAuth.HasApiKey()) return;
 
-            var linkedId = EditorPrefs.GetString("PurrServices_LinkedProjectId_" + Application.dataPath, "");
+            var linkedId = PurrServicesProjectLink.projectId;
             if (string.IsNullOrEmpty(linkedId)) return;
 
             try
@@ -149,9 +154,12 @@ namespace PurrNet.Services.Editor
                 var result = await PurrServicesAPI.GetProjects(PurrPackageManagerAuth.GetApiKey());
                 if (!result.Success) return;
 
-                var linked = Array.Find(result.Value.projects, p => p.id == linkedId);
+                var linked = PurrServicesProjectLink.FindLinkedProject(result.Value.projects);
                 if (linked != null)
+                {
+                    PurrServicesProjectLink.Link(linked);
                     _cachedLinkedKey = linked.publicKey;
+                }
             }
             catch
             {
