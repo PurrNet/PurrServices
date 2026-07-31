@@ -22,7 +22,6 @@
 * add Edgegap service and GUI integration for server deployment ([3f1ea5e](https://github.com/PurrNet/PurrServices/commit/3f1ea5e1b100b17dccba6bf2db2100c5e623ef25))
 * better lobby searching ([afee874](https://github.com/PurrNet/PurrServices/commit/afee87409128a257a056b04bd18fca6fc38eccd9))
 * edgegap clear all my deployments ([8d8effa](https://github.com/PurrNet/PurrServices/commit/8d8effab9625ec6dd6bc342a35c649f522423a1a))
-* free version ([937eb5d](https://github.com/PurrNet/PurrServices/commit/937eb5de2e32dced6c499077507472d6f31d92d1))
 * PurrTelemetry ([7230866](https://github.com/PurrNet/PurrServices/commit/723086628cb7724ae9448e7aa1b6de8fc3ca9f54))
 
 # [1.0.0-beta.16](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-07-30)
@@ -31,13 +30,6 @@
 ### Bug Fixes
 
 * remove rogue meta file ([2142fe8](https://github.com/PurrNet/PurrServices/commit/2142fe8932d344fb89476861eeeda2a8c3557c01))
-
-# [1.0.0-beta.15](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-07-30)
-
-
-### Features
-
-* free version ([937eb5d](https://github.com/PurrNet/PurrServices/commit/937eb5de2e32dced6c499077507472d6f31d92d1))
 
 # [1.0.0-beta.14](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-05-15)
 

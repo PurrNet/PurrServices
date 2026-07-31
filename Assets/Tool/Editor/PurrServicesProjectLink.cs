@@ -21,9 +21,7 @@ namespace PurrNet.Services.Editor
             GetConstant(ProjectNameKey(profile));
 
         internal static string PublicKey(PurrServicesProfile profile) =>
-            GetConstant(ModeKey(profile)) == PurrServicesSettings.ModeProject
-                ? GetConstant(ApiKeyKey(profile))
-                : null;
+            GetConstant(ApiKeyKey(profile));
 
         internal static string Scope(PurrServicesProfile profile) =>
             Scope(profile, ProjectId(profile));
@@ -37,18 +35,9 @@ namespace PurrNet.Services.Editor
         {
             if (project == null) return;
 
-            SetConstant(ModeKey(profile), PurrServicesSettings.ModeProject);
             SetConstant(ApiKeyKey(profile), project.publicKey);
             SetConstant(ProjectIdKey(profile), project.id);
             SetConstant(ProjectNameKey(profile), project.name);
-        }
-
-        internal static void Unlink(PurrServicesProfile profile)
-        {
-            SetConstant(ModeKey(profile), PurrServicesSettings.ModeFree);
-            DeleteConstant(ApiKeyKey(profile));
-            DeleteConstant(ProjectIdKey(profile));
-            DeleteConstant(ProjectNameKey(profile));
         }
 
         internal static void SetEditorOverride(bool enabled)
@@ -88,11 +77,6 @@ namespace PurrNet.Services.Editor
 
             return Array.Find(projects, project => project.id == linkedId);
         }
-
-        static string ModeKey(PurrServicesProfile profile) =>
-            profile == PurrServicesProfile.Editor
-                ? PurrServicesSettings.KeyEditorMode
-                : PurrServicesSettings.KeyBuildMode;
 
         static string ApiKeyKey(PurrServicesProfile profile) =>
             profile == PurrServicesProfile.Editor

@@ -60,6 +60,7 @@ namespace PurrNet.Services.Editor
 
         [NonSerialized] GUIStyle _smallLabelStyle;
         [NonSerialized] GUIStyle _itemNameStyle;
+        [NonSerialized] GUIStyle _externalItemStyle;
         [NonSerialized] GUIStyle _badgeStyle;
         [NonSerialized] GUIStyle _detailTitleStyle;
         [NonSerialized] GUIStyle _detailDescStyle;
@@ -89,6 +90,13 @@ namespace PurrNet.Services.Editor
                 padding = new RectOffset(12, 4, 0, 0),
                 margin = new RectOffset(0, 0, 0, 0),
                 alignment = TextAnchor.MiddleLeft
+            };
+
+            _externalItemStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 9,
+                alignment = TextAnchor.MiddleRight,
+                normal = { textColor = new Color(0.95f, 0.7f, 0.35f, 1f) }
             };
 
             _badgeStyle = new GUIStyle(EditorStyles.miniBoldLabel)
@@ -161,7 +169,10 @@ namespace PurrNet.Services.Editor
             {
                 var result = await PurrServicesAPI.GetProjects(PurrPackageManagerAuth.GetApiKey());
                 if (result.Success)
+                {
                     _projects = result.Value.projects;
+                    SelectAvailableProject();
+                }
                 else
                 {
                     _error = result.Error;
@@ -241,9 +252,12 @@ namespace PurrNet.Services.Editor
             Repaint();
         }
 
-        void SelectFreeTier()
+        void SelectLinkedProject(string projectId)
         {
-            _selectedAppId = null;
+            if (!IsLinkedProjectId(projectId))
+                return;
+
+            _selectedAppId = projectId;
             LoadSelectedScopes();
             _detailScrollPos = Vector2.zero;
             Repaint();
@@ -251,8 +265,29 @@ namespace PurrNet.Services.Editor
 
         void SelectCurrentApp()
         {
-            _selectedAppId = _buildProjectId;
+            _selectedAppId = !string.IsNullOrEmpty(_buildProjectId)
+                ? _buildProjectId
+                : EffectiveEditorProjectId;
             LoadSelectedScopes();
+        }
+
+        void SelectAvailableProject()
+        {
+            if (_projects == null || _projects.Length == 0)
+                return;
+
+            if (FindProject(_selectedAppId) != null ||
+                IsLinkedProjectId(_selectedAppId))
+                return;
+
+            var preferredId = !string.IsNullOrEmpty(_buildProjectId)
+                ? _buildProjectId
+                : EffectiveEditorProjectId;
+            _selectedAppId = !string.IsNullOrEmpty(preferredId)
+                ? preferredId
+                : _projects[0].id;
+            LoadSelectedScopes();
+            _detailScrollPos = Vector2.zero;
         }
 
         void LoadSelectedScopes()
@@ -269,18 +304,13 @@ namespace PurrNet.Services.Editor
 
         void SwitchToSelectedApp(PurrServicesProfile profile)
         {
-            if (IsSelectedAppCurrent(profile)) return;
+            if (IsSelectedAppCurrent(profile) ||
+                string.IsNullOrEmpty(_selectedAppId))
+                return;
 
-            if (string.IsNullOrEmpty(_selectedAppId))
-            {
-                UnlinkProject(profile);
-            }
-            else
-            {
-                var project = FindProject(_selectedAppId);
-                if (project == null) return;
-                LinkProject(project, profile);
-            }
+            var project = FindSelectableProject(_selectedAppId);
+            if (project == null) return;
+            LinkProject(project, profile);
 
             _detailScrollPos = Vector2.zero;
             Repaint();
@@ -288,6 +318,66 @@ namespace PurrNet.Services.Editor
 
         string EffectiveEditorProjectId =>
             _editorOverride ? _editorProjectId : _buildProjectId;
+
+        bool IsLinkedProjectId(string projectId) =>
+            !string.IsNullOrEmpty(projectId) &&
+            (string.Equals(projectId, _buildProjectId, StringComparison.Ordinal) ||
+             string.Equals(projectId, EffectiveEditorProjectId, StringComparison.Ordinal));
+
+        bool IsExternalProject(string projectId) =>
+            PurrPackageManagerAuth.HasApiKey() &&
+            _projects != null &&
+            !string.IsNullOrEmpty(projectId) &&
+            FindProject(projectId) == null;
+
+        string LinkedProjectName(string projectId)
+        {
+            if (string.Equals(projectId, _buildProjectId, StringComparison.Ordinal) &&
+                !string.IsNullOrEmpty(_buildProjectName))
+            {
+                return _buildProjectName;
+            }
+
+            if (string.Equals(projectId, _editorProjectId, StringComparison.Ordinal) &&
+                !string.IsNullOrEmpty(_editorProjectName))
+            {
+                return _editorProjectName;
+            }
+
+            return "Linked Project";
+        }
+
+        string LinkedProjectPublicKey(string projectId)
+        {
+            if (string.Equals(projectId, _buildProjectId, StringComparison.Ordinal))
+                return PurrServicesProjectLink.PublicKey(PurrServicesProfile.Build);
+
+            if (string.Equals(projectId, _editorProjectId, StringComparison.Ordinal))
+                return PurrServicesProjectLink.PublicKey(PurrServicesProfile.Editor);
+
+            return null;
+        }
+
+        ProjectInfo FindSelectableProject(string projectId)
+        {
+            var project = FindProject(projectId);
+            if (project != null)
+                return string.IsNullOrWhiteSpace(project.publicKey) ? null : project;
+
+            if (!IsLinkedProjectId(projectId))
+                return null;
+
+            var publicKey = LinkedProjectPublicKey(projectId);
+            if (string.IsNullOrWhiteSpace(publicKey))
+                return null;
+
+            return new ProjectInfo
+            {
+                id = projectId,
+                name = LinkedProjectName(projectId),
+                publicKey = publicKey
+            };
+        }
 
         bool IsSelectedAppCurrent(PurrServicesProfile profile) =>
             string.Equals(
@@ -302,7 +392,7 @@ namespace PurrNet.Services.Editor
             get
             {
                 if (string.IsNullOrEmpty(_selectedAppId))
-                    return "Free Tier";
+                    return "No Project Selected";
 
                 var project = FindProject(_selectedAppId);
                 if (!string.IsNullOrEmpty(project?.name))
@@ -337,12 +427,6 @@ namespace PurrNet.Services.Editor
         void LinkProject(ProjectInfo project, PurrServicesProfile profile)
         {
             PurrServicesProjectLink.Link(project, profile);
-            ReloadConfiguration();
-        }
-
-        void UnlinkProject(PurrServicesProfile profile)
-        {
-            PurrServicesProjectLink.Unlink(profile);
             ReloadConfiguration();
         }
 
@@ -423,7 +507,7 @@ namespace PurrNet.Services.Editor
                 EditorGUILayout.LabelField(
                     "Sign in to use a project.",
                     _smallLabelStyle);
-                if (GUILayout.Button("Login with Discord", GUILayout.Height(24)))
+                if (GUILayout.Button("Login", GUILayout.Height(24)))
                     PurrPackageManagerAuth.Login();
             }
             else if (_error != null)
@@ -441,7 +525,8 @@ namespace PurrNet.Services.Editor
                 else if (_projects == null || _projects.Length == 0)
                     EditorGUILayout.LabelField("No projects yet.", _smallLabelStyle);
 
-                DrawCreateProject();
+                if (!string.IsNullOrEmpty(_selectedAppId))
+                    DrawCreateProject();
             }
 
             GUILayout.Space(4);
@@ -475,14 +560,21 @@ namespace PurrNet.Services.Editor
             EditorGUILayout.BeginVertical(GUILayout.Width(contentWidth));
             GUILayout.Space(DETAIL_CONTENT_MARGIN);
 
-            EditorGUILayout.LabelField("Selected App", EditorStyles.boldLabel);
-            EditorGUILayout.Space(3);
-            DrawSelectedAppDetails();
+            if (string.IsNullOrEmpty(_selectedAppId))
+            {
+                DrawProjectSetup();
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Selected App", EditorStyles.boldLabel);
+                EditorGUILayout.Space(3);
+                DrawSelectedAppDetails();
 
-            EditorGUILayout.Space(8);
-            DrawSeparator();
-            EditorGUILayout.Space(8);
-            DrawRuntimeUsageSection(contentWidth);
+                EditorGUILayout.Space(8);
+                DrawSeparator();
+                EditorGUILayout.Space(8);
+                DrawRuntimeUsageSection(contentWidth);
+            }
 
             EditorGUILayout.Space(8);
             DrawSeparator();
@@ -493,6 +585,56 @@ namespace PurrNet.Services.Editor
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndScrollView();
             EditorGUILayout.EndVertical();
+        }
+
+        void DrawProjectSetup()
+        {
+            EditorGUILayout.LabelField("Project Required", _detailTitleStyle);
+            EditorGUILayout.HelpBox(
+                "PurrServices must be linked to a project before it can be used.",
+                MessageType.Warning);
+            EditorGUILayout.Space(6);
+
+            if (!PurrPackageManagerAuth.HasApiKey())
+            {
+                if (GUILayout.Button(
+                        "Login",
+                        GUILayout.Height(28),
+                        GUILayout.Width(130)))
+                {
+                    PurrPackageManagerAuth.Login();
+                }
+
+                return;
+            }
+
+            if (_error != null)
+            {
+                EditorGUILayout.HelpBox(_error, MessageType.Error);
+                using (new EditorGUI.DisabledScope(_isBusy))
+                {
+                    if (GUILayout.Button(
+                            "Retry",
+                            GUILayout.Height(28),
+                            GUILayout.Width(130)))
+                    {
+                        RefreshProjects();
+                    }
+                }
+                return;
+            }
+
+            if (_isBusy)
+            {
+                EditorGUILayout.LabelField("Loading projects...", _smallLabelStyle);
+                return;
+            }
+
+            EditorGUILayout.LabelField(
+                "Create a project to configure Player Builds and the Unity Editor.",
+                _detailDescStyle);
+            EditorGUILayout.Space(4);
+            DrawCreateProject("Create Project");
         }
 
         void DrawRuntimeUsageSection(float availableWidth)
@@ -528,21 +670,22 @@ namespace PurrNet.Services.Editor
         void DrawEditorAssignment()
         {
             EditorGUI.BeginChangeCheck();
-            var inheritBuild = DrawEditorColumnHeader(!_editorOverride);
+            var editorOverride = DrawEditorColumnHeader(_editorOverride);
             if (EditorGUI.EndChangeCheck())
             {
-                _editorOverride = !inheritBuild;
+                _editorOverride = editorOverride;
                 PurrServicesProjectLink.SetEditorOverride(_editorOverride);
                 ReloadConfiguration();
                 LoadSelectedScopes();
             }
 
+            var inheritBuild = !_editorOverride;
             EditorGUI.BeginDisabledGroup(inheritBuild);
             DrawProfileAssignment(PurrServicesProfile.Editor, inheritBuild);
             EditorGUI.EndDisabledGroup();
         }
 
-        bool DrawEditorColumnHeader(bool inheritBuild)
+        bool DrawEditorColumnHeader(bool editorOverride)
         {
             EditorGUILayout.BeginHorizontal();
             var badgeRect = GUILayoutUtility.GetRect(
@@ -553,20 +696,17 @@ namespace PurrNet.Services.Editor
             if (Event.current.type == EventType.Repaint)
                 DrawProfileBadge(badgeRect, "E", EDITOR_COLOR);
 
-            EditorGUILayout.LabelField(
-                ProfileDisplayName(PurrServicesProfile.Editor),
-                EditorStyles.boldLabel,
-                GUILayout.Height(18));
-            var nextInheritBuild = EditorGUILayout.ToggleLeft(
+            var nextEditorOverride = EditorGUILayout.ToggleLeft(
                 new GUIContent(
-                    "Use Builds",
-                    "Use Player Builds configuration"),
-                inheritBuild,
-                GUILayout.Width(82),
+                    "Unity Editor Override",
+                    "Enable to unlock a separate project and scope for the Unity Editor. " +
+                    "When disabled, the Editor uses the Player Builds configuration."),
+                editorOverride,
+                EditorStyles.boldLabel,
                 GUILayout.Height(18));
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(3);
-            return nextInheritBuild;
+            return nextEditorOverride;
         }
 
         void DrawProfileColumnHeader(PurrServicesProfile profile)
@@ -601,13 +741,15 @@ namespace PurrNet.Services.Editor
         {
             var profileLabel = ProfileDisplayName(profile);
             EditorGUILayout.LabelField(
-                $"Scope remembered for {SelectedAppDisplayName}",
+                inheritBuild
+                    ? "Using Player Builds project and scope"
+                    : $"Scope remembered for {SelectedAppDisplayName}",
                 _smallLabelStyle);
 
             if (profile == PurrServicesProfile.Build || inheritBuild)
             {
                 DrawNamespaceConfiguration(
-                    profile,
+                    inheritBuild ? PurrServicesProfile.Build : profile,
                     profileLabel,
                     _selectedAppId,
                     ref _selectedBuildScope,
@@ -623,68 +765,50 @@ namespace PurrNet.Services.Editor
                     ref _editorScopeError);
             }
 
-            var usingFreeBuild =
-                profile == PurrServicesProfile.Build &&
-                IsSelectedAppCurrent(profile) &&
-                string.IsNullOrEmpty(_selectedAppId);
-            if (usingFreeBuild && IsPurrNetHosted(_serverUrl))
-            {
-                EditorGUILayout.HelpBox(
-                    "The free development tier is not intended for production. Choose a " +
-                    "project before releasing your game.",
-                    MessageType.Warning);
-            }
-
             DrawSwitchAction(profile);
         }
 
         void DrawSelectedAppDetails()
         {
             var project = FindProject(_selectedAppId);
-            if (string.IsNullOrEmpty(_selectedAppId))
+            var projectName = project?.name ?? SelectedAppDisplayName;
+
+            EditorGUILayout.LabelField(
+                string.IsNullOrEmpty(projectName) ? "Project" : projectName,
+                _detailTitleStyle);
+
+            if (project != null)
             {
-                EditorGUILayout.LabelField("Free Tier", _detailTitleStyle);
-                EditorGUILayout.LabelField("Development", _smallLabelStyle);
+                EditorGUILayout.LabelField(project.slug, _smallLabelStyle);
                 EditorGUILayout.Space(6);
-                DrawInfoRow("Created", "—");
-                DrawInfoRow("Public Key", "—");
-                EditorGUILayout.Space(6);
-                using (new EditorGUI.DisabledScope(true))
-                {
-                    GUILayout.Button(
-                        "Open Dashboard",
-                        GUILayout.Height(24),
-                        GUILayout.Width(130));
-                }
+                DrawInfoRow("Created", FormatDate(project.createdAt));
+                DrawInfoRow("Public Key", FormatPublicKey(project.publicKey));
             }
             else
             {
-                var projectName = project?.name ?? SelectedAppDisplayName;
-
+                var isExternal = IsExternalProject(_selectedAppId);
                 EditorGUILayout.LabelField(
-                    string.IsNullOrEmpty(projectName) ? "Project" : projectName,
-                    _detailTitleStyle);
-
-                if (project != null)
-                {
-                    EditorGUILayout.LabelField(project.slug, _smallLabelStyle);
-                    EditorGUILayout.Space(6);
-                    DrawInfoRow("Created", FormatDate(project.createdAt));
-                    var publicKey = string.IsNullOrEmpty(project.publicKey)
-                        ? "—"
-                        : project.publicKey.Length > 28
-                            ? project.publicKey[..28] + "..."
-                            : project.publicKey;
-                    DrawInfoRow("Public Key", publicKey);
-                }
-                else
-                {
-                    EditorGUILayout.LabelField(
-                        "Sign in to load this project's details.",
-                        _detailDescStyle);
-                }
-
+                    isExternal ? "External Project" : "Linked Project",
+                    _smallLabelStyle);
                 EditorGUILayout.Space(6);
+                DrawInfoRow("Created", "—");
+                DrawInfoRow(
+                    "Public Key",
+                    FormatPublicKey(LinkedProjectPublicKey(_selectedAppId)));
+                EditorGUILayout.Space(6);
+                EditorGUILayout.HelpBox(
+                    isExternal
+                        ? "This project is linked through version-controlled settings, but it " +
+                          "is not available to the signed-in account. You can keep using it or " +
+                          "switch to one of your projects."
+                        : "This project is linked through version-controlled settings. Login " +
+                          "or refresh projects to verify dashboard access.",
+                    isExternal ? MessageType.Warning : MessageType.Info);
+            }
+
+            EditorGUILayout.Space(6);
+            using (new EditorGUI.DisabledScope(project == null))
+            {
                 if (GUILayout.Button(
                         "Open Dashboard",
                         GUILayout.Height(24),
@@ -693,7 +817,6 @@ namespace PurrNet.Services.Editor
                     Application.OpenURL($"{DASHBOARD_URL}/{_selectedAppId}");
                 }
             }
-
         }
 
         void DrawSwitchAction(PurrServicesProfile profile)
@@ -715,14 +838,24 @@ namespace PurrNet.Services.Editor
                 var target = profile == PurrServicesProfile.Build
                     ? "Builds"
                     : "Editor";
-                var buttonLabel = string.IsNullOrEmpty(_selectedAppId)
-                    ? $"Switch {target} to Free Tier"
-                    : $"Switch {target} to This Project";
-                if (GUILayout.Button(
-                        buttonLabel,
-                        GUILayout.Height(28),
-                        GUILayout.ExpandWidth(true)))
-                    SwitchToSelectedApp(profile);
+                var canSwitch = FindSelectableProject(_selectedAppId) != null;
+                using (new EditorGUI.DisabledScope(!canSwitch))
+                {
+                    if (GUILayout.Button(
+                            $"Switch {target} to This Project",
+                            GUILayout.Height(28),
+                            GUILayout.ExpandWidth(true)))
+                    {
+                        SwitchToSelectedApp(profile);
+                    }
+                }
+
+                if (!canSwitch)
+                {
+                    EditorGUILayout.LabelField(
+                        "This project has no public key.",
+                        _smallLabelStyle);
+                }
             }
         }
 
@@ -850,15 +983,6 @@ namespace PurrNet.Services.Editor
             return true;
         }
 
-        static bool IsPurrNetHosted(string serverUrl)
-        {
-            if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri))
-                return false;
-
-            return uri.Host.Equals("purrnet.dev", StringComparison.OrdinalIgnoreCase) ||
-                   uri.Host.EndsWith(".purrnet.dev", StringComparison.OrdinalIgnoreCase);
-        }
-
         void DrawPaneHeader(string title, string subtitle)
         {
             var rect = GUILayoutUtility.GetRect(
@@ -973,27 +1097,62 @@ namespace PurrNet.Services.Editor
             EditorGUI.DrawRect(areaRect, LIST_BG);
 
             var projectCount = _projects?.Length ?? 0;
-            float totalHeight = (projectCount + 1) * ITEM_HEIGHT;
+            var showLinkedBuild =
+                !string.IsNullOrEmpty(_buildProjectId) &&
+                FindProject(_buildProjectId) == null;
+            var editorProjectId = EffectiveEditorProjectId;
+            var showLinkedEditor =
+                !string.IsNullOrEmpty(editorProjectId) &&
+                !string.Equals(editorProjectId, _buildProjectId, StringComparison.Ordinal) &&
+                FindProject(editorProjectId) == null;
+            var linkedProjectCount =
+                (showLinkedBuild ? 1 : 0) +
+                (showLinkedEditor ? 1 : 0);
+            float totalHeight = (projectCount + linkedProjectCount) * ITEM_HEIGHT;
             bool needsScroll = totalHeight > areaRect.height;
-            var viewRect = new Rect(0, 0, areaRect.width - (needsScroll ? 13f : 0f), totalHeight);
+            var viewRect = new Rect(
+                0,
+                0,
+                areaRect.width - (needsScroll ? 13f : 0f),
+                Mathf.Max(totalHeight, areaRect.height));
 
             _listScrollPos = GUI.BeginScrollView(areaRect, _listScrollPos, viewRect);
 
-            DrawAppRow(
-                new Rect(0, 0, viewRect.width, ITEM_HEIGHT),
-                "Free Tier",
-                string.IsNullOrEmpty(_selectedAppId),
-                string.IsNullOrEmpty(_buildProjectId),
-                string.IsNullOrEmpty(EffectiveEditorProjectId),
-                SelectFreeTier);
+            var rowIndex = 0;
+            if (showLinkedBuild)
+            {
+                var projectId = _buildProjectId;
+                DrawAppRow(
+                    new Rect(0, rowIndex++ * ITEM_HEIGHT, viewRect.width, ITEM_HEIGHT),
+                    LinkedProjectName(projectId),
+                    IsExternalProject(projectId) ? "External" : null,
+                    projectId == _selectedAppId,
+                    true,
+                    projectId == editorProjectId,
+                    () => SelectLinkedProject(projectId));
+            }
+
+            if (showLinkedEditor)
+            {
+                var projectId = editorProjectId;
+                DrawAppRow(
+                    new Rect(0, rowIndex++ * ITEM_HEIGHT, viewRect.width, ITEM_HEIGHT),
+                    LinkedProjectName(projectId),
+                    IsExternalProject(projectId) ? "External" : null,
+                    projectId == _selectedAppId,
+                    false,
+                    true,
+                    () => SelectLinkedProject(projectId));
+            }
 
             for (int i = 0; i < projectCount; i++)
             {
                 var project = _projects[i];
                 var index = i;
                 DrawAppRow(
-                    new Rect(0, (i + 1) * ITEM_HEIGHT, viewRect.width, ITEM_HEIGHT),
+                    new Rect(0, rowIndex++ * ITEM_HEIGHT, viewRect.width, ITEM_HEIGHT),
                     project.name,
+                    null,
                     project.id == _selectedAppId,
                     project.id == _buildProjectId,
                     project.id == EffectiveEditorProjectId,
@@ -1006,6 +1165,7 @@ namespace PurrNet.Services.Editor
         void DrawAppRow(
             Rect itemRect,
             string label,
+            string status,
             bool isSelected,
             bool isBuildActive,
             bool isEditorActive,
@@ -1034,12 +1194,29 @@ namespace PurrNet.Services.Editor
             if (Event.current.type == EventType.Repaint)
             {
                 var badgeAreaWidth = 44f;
+                var statusWidth = string.IsNullOrEmpty(status)
+                    ? 0f
+                    : Mathf.Min(
+                        58f,
+                        _externalItemStyle.CalcSize(new GUIContent(status)).x + 8f);
                 var nameRect = new Rect(
                     itemRect.x,
                     itemRect.y,
-                    itemRect.width - badgeAreaWidth,
+                    itemRect.width - badgeAreaWidth - statusWidth,
                     itemRect.height);
                 _itemNameStyle.Draw(nameRect, label, false, false, false, false);
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    GUI.Label(
+                        new Rect(
+                            itemRect.xMax - badgeAreaWidth - statusWidth,
+                            itemRect.y,
+                            statusWidth,
+                            itemRect.height),
+                        status,
+                        _externalItemStyle);
+                }
 
                 if (isBuildActive)
                 {
@@ -1091,14 +1268,24 @@ namespace PurrNet.Services.Editor
             return isoDate ?? "—";
         }
 
-        void DrawCreateProject()
+        static string FormatPublicKey(string publicKey)
+        {
+            if (string.IsNullOrEmpty(publicKey))
+                return "—";
+
+            return publicKey.Length > 28
+                ? publicKey[..28] + "..."
+                : publicKey;
+        }
+
+        void DrawCreateProject(string buttonLabel = "+ New Project")
         {
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(4);
 
             if (!_showCreateField)
             {
-                if (GUILayout.Button("+ New Project", GUILayout.Height(22)))
+                if (GUILayout.Button(buttonLabel, GUILayout.Height(22)))
                     _showCreateField = true;
             }
             else

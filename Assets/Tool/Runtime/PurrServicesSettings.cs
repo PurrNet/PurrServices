@@ -7,21 +7,17 @@ namespace PurrNet.Services
     {
         public const string KeyServerUrl = "PurrServices.serverUrl";
 
-        public const string KeyBuildMode = "PurrServices.build.mode";
         public const string KeyBuildApiKey = "PurrServices.build.apiKey";
         public const string KeyBuildProjectId = "PurrServices.build.projectId";
         public const string KeyBuildProjectName = "PurrServices.build.projectName";
         public const string KeyBuildScopePrefix = "PurrServices.build.scope.";
 
         public const string KeyEditorOverride = "PurrServices.editor.override";
-        public const string KeyEditorMode = "PurrServices.editor.mode";
         public const string KeyEditorApiKey = "PurrServices.editor.apiKey";
         public const string KeyEditorProjectId = "PurrServices.editor.projectId";
         public const string KeyEditorProjectName = "PurrServices.editor.projectName";
         public const string KeyEditorScopePrefix = "PurrServices.editor.scope.";
 
-        public const string ModeFree = "free";
-        public const string ModeProject = "project";
         public const string DefaultServerUrl = "https://purrnet.dev";
         public const string DefaultBuildScope = "production";
         public const string DefaultEditorScope = "editor";
@@ -44,24 +40,14 @@ namespace PurrNet.Services
             }
         }
 
-        public static string mode => GetActiveValue(KeyBuildMode, KeyEditorMode) ?? ModeFree;
-
         public static string projectId =>
-            mode == ModeProject ? GetActiveValue(KeyBuildProjectId, KeyEditorProjectId) : null;
+            GetActiveValue(KeyBuildProjectId, KeyEditorProjectId);
 
         public static string projectName =>
-            mode == ModeProject ? GetActiveValue(KeyBuildProjectName, KeyEditorProjectName) : null;
+            GetActiveValue(KeyBuildProjectName, KeyEditorProjectName);
 
-        public static string apiKey
-        {
-            get
-            {
-                if (mode != ModeProject)
-                    return null;
-
-                return GetActiveValue(KeyBuildApiKey, KeyEditorApiKey);
-            }
-        }
+        public static string apiKey =>
+            GetActiveValue(KeyBuildApiKey, KeyEditorApiKey);
 
         public static string serverUrl
         {
@@ -85,10 +71,11 @@ namespace PurrNet.Services
                 ? DefaultLobbyCompatibility
                 : Application.version.Trim();
 
-        public static bool isFreeTier => string.IsNullOrWhiteSpace(apiKey);
-
         public static string EnvironmentScope(bool editorProfile, string appId)
         {
+            if (string.IsNullOrWhiteSpace(appId))
+                return editorProfile ? DefaultEditorScope : DefaultBuildScope;
+
             var key = EnvironmentScopeKey(editorProfile, appId);
             if (ApplicationConstants.TryGet(key, out var value) &&
                 !string.IsNullOrWhiteSpace(value))
@@ -101,9 +88,11 @@ namespace PurrNet.Services
 
         public static string EnvironmentScopeKey(bool editorProfile, string appId)
         {
+            if (string.IsNullOrWhiteSpace(appId))
+                throw new System.ArgumentException("A project id is required.", nameof(appId));
+
             var prefix = editorProfile ? KeyEditorScopePrefix : KeyBuildScopePrefix;
-            var identity = string.IsNullOrWhiteSpace(appId) ? ModeFree : appId.Trim();
-            return prefix + identity;
+            return prefix + appId.Trim();
         }
 
         static string GetActiveValue(string buildKey, string editorKey)

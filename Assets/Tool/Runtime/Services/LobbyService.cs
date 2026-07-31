@@ -8,7 +8,6 @@ namespace PurrNet.Services
     {
         readonly ServiceHttp _http;
         readonly Func<string> _getApiKey;
-        readonly Func<string> _getGameId;
         readonly Func<string> _getEnvironmentScope;
         readonly Func<string> _getLobbyCompatibility;
         readonly Func<string> _getSessionToken;
@@ -17,7 +16,6 @@ namespace PurrNet.Services
         internal LobbyService(
             ServiceHttp http,
             Func<string> getApiKey,
-            Func<string> getGameId,
             Func<string> getEnvironmentScope,
             Func<string> getLobbyCompatibility,
             Func<string> getSessionToken,
@@ -25,7 +23,6 @@ namespace PurrNet.Services
         {
             _http = http;
             _getApiKey = getApiKey;
-            _getGameId = getGameId;
             _getEnvironmentScope = getEnvironmentScope;
             _getLobbyCompatibility = getLobbyCompatibility;
             _getSessionToken = getSessionToken;
@@ -323,7 +320,6 @@ namespace PurrNet.Services
             return new LobbyConnection(
                 uri,
                 _getApiKey(),
-                _getGameId(),
                 _getEnvironmentScope(),
                 _getLobbyCompatibility(),
                 _getSessionToken(),

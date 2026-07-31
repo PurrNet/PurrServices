@@ -19,7 +19,6 @@ namespace PurrNet.Services
     {
         readonly Uri _uri;
         readonly string _apiKey;
-        readonly string _gameId;
         readonly string _environmentScope;
         readonly string _lobbyCompatibility;
         readonly string _sessionToken;
@@ -50,7 +49,6 @@ namespace PurrNet.Services
         internal LobbyConnection(
             Uri uri,
             string apiKey,
-            string gameId,
             string environmentScope,
             string lobbyCompatibility,
             string sessionToken,
@@ -58,7 +56,6 @@ namespace PurrNet.Services
         {
             _uri = uri;
             _apiKey = apiKey;
-            _gameId = gameId;
             _environmentScope = environmentScope;
             _lobbyCompatibility = lobbyCompatibility;
             _sessionToken = sessionToken;
@@ -85,13 +82,11 @@ namespace PurrNet.Services
         void HandleConnect()
         {
             _state = LobbyConnectionState.Authenticating;
-            var useFreeTier = string.IsNullOrWhiteSpace(_apiKey);
 
             var auth = new WsAuthMessage
             {
                 type = "auth",
-                apiKey = useFreeTier ? null : _apiKey.Trim(),
-                gameId = useFreeTier ? _gameId : null,
+                apiKey = string.IsNullOrWhiteSpace(_apiKey) ? null : _apiKey.Trim(),
                 scope = _environmentScope,
                 lobbyCompatibility = _lobbyCompatibility,
                 sessionToken = _sessionToken,

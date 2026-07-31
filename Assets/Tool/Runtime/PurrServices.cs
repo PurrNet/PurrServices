@@ -65,10 +65,9 @@ namespace PurrNet.Services
         public string playerId => _auth?.playerId;
         public string playerName => _auth?.displayName;
         public string serverUrl => _serverUrl;
-        public string gameId => Application.identifier;
         public string environmentScope => _environmentScope;
         public string lobbyCompatibility => _lobbyCompatibility;
-        public bool isFreeTier => string.IsNullOrWhiteSpace(_apiKey);
+        public bool isConfigured => !string.IsNullOrWhiteSpace(_apiKey);
 
         string _activePlayerToken;
 
@@ -110,7 +109,6 @@ namespace PurrNet.Services
             _http = new ServiceHttp(
                 () => _serverUrl,
                 () => _apiKey,
-                () => gameId,
                 () => _environmentScope,
                 () => _lobbyCompatibility,
                 () => _auth?.sessionToken,
@@ -122,7 +120,6 @@ namespace PurrNet.Services
             _lobbies = new LobbyService(
                 _http,
                 () => _apiKey,
-                () => gameId,
                 () => _environmentScope,
                 () => _lobbyCompatibility,
                 () => _auth?.sessionToken,
