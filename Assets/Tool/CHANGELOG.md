@@ -1,3 +1,10 @@
+# [1.1.0-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.0.1-beta.2...v1.1.0-beta.1) (2026-07-31)
+
+
+### Features
+
+* create project from window ([79e2198](https://github.com/PurrNet/PurrServices/commit/79e21988ea001ccb4478ab0acd1bab2bc13c3bef))
+
 ## [1.0.1-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.0.1-beta.1...v1.0.1-beta.2) (2026-07-31)
 
 
