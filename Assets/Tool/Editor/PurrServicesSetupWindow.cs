@@ -198,7 +198,9 @@ namespace PurrNet.Services.Editor
 
             try
             {
-                var result = await PurrServicesAPI.CreateProject(PurrPackageManagerAuth.GetApiKey(), projectName);
+                var result = await PurrServicesAPI.CreateProject(
+                    PurrPackageManagerAuth.GetApiKey(),
+                    projectName.Trim());
                 if (result.Success)
                 {
                     _newProjectName = "";
@@ -458,7 +460,11 @@ namespace PurrNet.Services.Editor
             EditorGUILayout.BeginVertical(GUILayout.Width(_splitWidth));
             DrawPaneHeader(
                 "Apps",
-                "B  Builds    E  Unity Editor");
+                "B  Builds    E  Unity Editor",
+                AppsHeaderActionLabel,
+                HandleAppsHeaderAction);
+            if (_showCreateField)
+                DrawCreateProject();
             var listRect = GUILayoutUtility.GetRect(
                 0,
                 10000,
@@ -510,26 +516,49 @@ namespace PurrNet.Services.Editor
                 if (GUILayout.Button("Login", GUILayout.Height(24)))
                     PurrPackageManagerAuth.Login();
             }
-            else if (_error != null)
-            {
-                EditorGUILayout.HelpBox(_error, MessageType.Error);
-                GUI.enabled = !_isBusy;
-                if (GUILayout.Button("Retry", GUILayout.Height(22)))
-                    RefreshProjects();
-                GUI.enabled = true;
-            }
             else
             {
-                if (_isBusy)
-                    EditorGUILayout.LabelField("Loading projects...", _smallLabelStyle);
-                else if (_projects == null || _projects.Length == 0)
-                    EditorGUILayout.LabelField("No projects yet.", _smallLabelStyle);
+                if (_error != null)
+                {
+                    EditorGUILayout.HelpBox(_error, MessageType.Error);
+                    using (new EditorGUI.DisabledScope(_isBusy))
+                    {
+                        if (GUILayout.Button("Retry", GUILayout.Height(22)))
+                            RefreshProjects();
+                    }
+                }
+                else
+                {
+                    if (_isBusy)
+                        EditorGUILayout.LabelField("Loading projects...", _smallLabelStyle);
+                    else if (_projects == null || _projects.Length == 0)
+                        EditorGUILayout.LabelField("No projects yet.", _smallLabelStyle);
+                }
 
-                if (!string.IsNullOrEmpty(_selectedAppId))
-                    DrawCreateProject();
             }
 
             GUILayout.Space(4);
+        }
+
+        string AppsHeaderActionLabel =>
+            !PurrPackageManagerAuth.HasApiKey()
+                ? "Login"
+                : _showCreateField
+                    ? "Cancel"
+                    : "+ Create";
+
+        void HandleAppsHeaderAction()
+        {
+            if (!PurrPackageManagerAuth.HasApiKey())
+            {
+                PurrPackageManagerAuth.Login();
+                return;
+            }
+
+            _showCreateField = !_showCreateField;
+            if (!_showCreateField)
+                _newProjectName = "";
+            Repaint();
         }
 
         void DrawAppConfiguration(float availableWidth, float availableHeight)
@@ -631,10 +660,8 @@ namespace PurrNet.Services.Editor
             }
 
             EditorGUILayout.LabelField(
-                "Create a project to configure Player Builds and the Unity Editor.",
+                "Use + Create in the Apps header, then choose where the project is used.",
                 _detailDescStyle);
-            EditorGUILayout.Space(4);
-            DrawCreateProject("Create Project");
         }
 
         void DrawRuntimeUsageSection(float availableWidth)
@@ -983,25 +1010,45 @@ namespace PurrNet.Services.Editor
             return true;
         }
 
-        void DrawPaneHeader(string title, string subtitle)
+        void DrawPaneHeader(
+            string title,
+            string subtitle,
+            string actionLabel = null,
+            Action action = null,
+            bool actionEnabled = true)
         {
             var rect = GUILayoutUtility.GetRect(
                 0,
                 PANE_HEADER_HEIGHT,
                 GUILayout.ExpandWidth(true));
+            var actionWidth = string.IsNullOrEmpty(actionLabel) ? 0f : 66f;
+            var labelWidth = rect.width - 16f - actionWidth;
             EditorGUI.DrawRect(rect, HEADER_BG);
             EditorGUI.DrawRect(
                 new Rect(rect.x, rect.yMax - 1, rect.width, 1),
                 SEPARATOR_COLOR);
 
             GUI.Label(
-                new Rect(rect.x + 8, rect.y + 4, rect.width - 16, 18),
+                new Rect(rect.x + 8, rect.y + 4, labelWidth, 18),
                 title,
                 _paneTitleStyle);
             GUI.Label(
-                new Rect(rect.x + 8, rect.y + 22, rect.width - 16, 16),
+                new Rect(rect.x + 8, rect.y + 22, labelWidth, 16),
                 subtitle,
                 _smallLabelStyle);
+
+            if (!string.IsNullOrEmpty(actionLabel))
+            {
+                using (new EditorGUI.DisabledScope(!actionEnabled))
+                {
+                    if (GUI.Button(
+                            new Rect(rect.xMax - actionWidth - 6f, rect.y + 9f, actionWidth, 23f),
+                            actionLabel))
+                    {
+                        action?.Invoke();
+                    }
+                }
+            }
         }
 
         void DrawHeader()
@@ -1278,34 +1325,45 @@ namespace PurrNet.Services.Editor
                 : publicKey;
         }
 
-        void DrawCreateProject(string buttonLabel = "+ New Project")
+        void DrawCreateProject()
         {
+            if (!_showCreateField)
+                return;
+
+            EditorGUILayout.BeginVertical();
+
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(4);
+            EditorGUILayout.LabelField("Project Name", _smallLabelStyle);
+            GUILayout.Space(4);
+            EditorGUILayout.EndHorizontal();
 
-            if (!_showCreateField)
-            {
-                if (GUILayout.Button(buttonLabel, GUILayout.Height(22)))
-                    _showCreateField = true;
-            }
-            else
-            {
-                _newProjectName = EditorGUILayout.TextField(_newProjectName, GUILayout.Height(20));
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(4);
+            _newProjectName = EditorGUILayout.TextField(
+                _newProjectName,
+                GUILayout.Height(22));
+            GUILayout.Space(4);
+            EditorGUILayout.EndHorizontal();
 
-                GUI.enabled = !_isBusy && !string.IsNullOrWhiteSpace(_newProjectName);
-                if (GUILayout.Button("Create", GUILayout.Width(55), GUILayout.Height(20)))
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(4);
+            using (new EditorGUI.DisabledScope(
+                       _isBusy || string.IsNullOrWhiteSpace(_newProjectName)))
+            {
+                if (GUILayout.Button("Create Project", GUILayout.Height(22)))
                     CreateProject(_newProjectName);
-                GUI.enabled = true;
+            }
 
-                if (GUILayout.Button("Cancel", GUILayout.Width(50), GUILayout.Height(20)))
-                {
-                    _showCreateField = false;
-                    _newProjectName = "";
-                }
+            if (GUILayout.Button("Cancel", GUILayout.Width(52), GUILayout.Height(22)))
+            {
+                _showCreateField = false;
+                _newProjectName = "";
             }
 
             GUILayout.Space(4);
             EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
         }
 
     }
