@@ -1,3 +1,10 @@
+## [1.0.1-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.0.0...v1.0.1-beta.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* simpler configs ([f7ac65e](https://github.com/PurrNet/PurrServices/commit/f7ac65ef58ba9e3480a4af331cca71284ed9604b))
+
 # 1.0.0 (2026-07-30)
 
 
