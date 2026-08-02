@@ -1,3 +1,23 @@
+# [1.1.0](https://github.com/PurrNet/PurrServices/compare/v1.0.0...v1.1.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* remove free tier; ease creation of project ([04c7101](https://github.com/PurrNet/PurrServices/commit/04c71014fecd953d464c0f003fcc8393bc5c49af))
+* simpler configs ([f7ac65e](https://github.com/PurrNet/PurrServices/commit/f7ac65ef58ba9e3480a4af331cca71284ed9604b))
+
+
+### Features
+
+* create project from window ([79e2198](https://github.com/PurrNet/PurrServices/commit/79e21988ea001ccb4478ab0acd1bab2bc13c3bef))
+
+# [1.1.0-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.0.1-beta.2...v1.1.0-beta.1) (2026-07-31)
+
+
+### Features
+
+* create project from window ([79e2198](https://github.com/PurrNet/PurrServices/commit/79e21988ea001ccb4478ab0acd1bab2bc13c3bef))
+
 ## [1.0.1-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.0.1-beta.1...v1.0.1-beta.2) (2026-07-31)
 
 
