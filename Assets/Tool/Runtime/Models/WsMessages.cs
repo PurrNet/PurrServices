@@ -21,8 +21,11 @@ namespace PurrNet.Services
         [JsonProperty("apiKey", NullValueHandling = NullValueHandling.Ignore)]
         public string apiKey;
 
-        [JsonProperty("gameId", NullValueHandling = NullValueHandling.Ignore)]
-        public string gameId;
+        [JsonProperty("scope")]
+        public string scope;
+
+        [JsonProperty("lobbyCompatibility")]
+        public string lobbyCompatibility;
 
         [JsonProperty("sessionToken")]
         public string sessionToken;
@@ -77,8 +80,8 @@ namespace PurrNet.Services
         [JsonProperty("player")]
         public LobbyPlayer player;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("revision")]
+        public int revision;
     }
 
     [Serializable]
@@ -93,8 +96,8 @@ namespace PurrNet.Services
         [JsonProperty("newHostPlayerId")]
         public string newHostPlayerId;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("revision")]
+        public int revision;
     }
 
     [Serializable]
@@ -106,8 +109,8 @@ namespace PurrNet.Services
         [JsonProperty("joinable")]
         public bool joinable;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("revision")]
+        public int revision;
     }
 
     [Serializable]
@@ -119,8 +122,8 @@ namespace PurrNet.Services
         [JsonProperty("metadata")]
         public Dictionary<string, string> metadata;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("revision")]
+        public int revision;
     }
 
     [Serializable]
@@ -135,8 +138,8 @@ namespace PurrNet.Services
         [JsonProperty("metadata")]
         public Dictionary<string, string> metadata;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("revision")]
+        public int revision;
     }
 
     [Serializable]

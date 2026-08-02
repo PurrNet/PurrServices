@@ -45,8 +45,14 @@ namespace PurrNet.Services
         [JsonProperty("chatSeq")]
         public int chatSeq;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("scope")]
+        public string scope;
+
+        [JsonProperty("compatibility")]
+        public string compatibility;
+
+        [JsonProperty("revision")]
+        public int revision;
 
         [JsonProperty("createdAt")]
         public long createdAt;
@@ -166,8 +172,14 @@ namespace PurrNet.Services
         [JsonProperty("chatSeq")]
         public int chatSeq;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("scope")]
+        public string scope;
+
+        [JsonProperty("compatibility")]
+        public string compatibility;
+
+        [JsonProperty("revision")]
+        public int revision;
 
         [JsonProperty("createdAt")]
         public long createdAt;
@@ -297,8 +309,14 @@ namespace PurrNet.Services
         [JsonProperty("chatSeq")]
         public int chatSeq;
 
-        [JsonProperty("version")]
-        public int version;
+        [JsonProperty("scope")]
+        public string scope;
+
+        [JsonProperty("compatibility")]
+        public string compatibility;
+
+        [JsonProperty("revision")]
+        public int revision;
 
         [JsonProperty("createdAt")]
         public long createdAt;

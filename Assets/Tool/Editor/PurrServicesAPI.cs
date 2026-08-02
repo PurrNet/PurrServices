@@ -60,6 +60,15 @@ namespace PurrNet.Services.Editor
         [JsonProperty("code")]
         public string code;
 
+        [JsonProperty("scope")]
+        public string scope;
+
+        [JsonProperty("compatibility")]
+        public string compatibility;
+
+        [JsonProperty("revision")]
+        public int revision;
+
         [JsonProperty("maxPlayers")]
         public int maxPlayers;
 

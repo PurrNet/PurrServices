@@ -1,3 +1,7 @@
 {
-  "version": "v1.20.0-beta.100"
+  "version": "v1.20.0-beta.100",
+  "PurrServices.editor.override": "False",
+  "PurrServices.build.apiKey": "pk_pub_6c66d7a546da45969f461a7a5424b00f1e07908bdcd5d9f8bbe4c33b6d7cf8ba",
+  "PurrServices.build.projectId": "4d38da5c-b0e5-4f77-9ede-7dedc9d9eb34",
+  "PurrServices.build.projectName": "Testing From Unity"
 }
