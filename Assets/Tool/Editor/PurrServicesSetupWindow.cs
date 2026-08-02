@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using PurrNet.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -85,6 +86,53 @@ namespace PurrNet.Services.Editor
                 window._newProjectName = suggestedName.Trim();
             window.Focus();
             window.Repaint();
+        }
+
+        /// <summary>
+        /// Creates a project without opening the setup window and links it to the
+        /// requested runtime profile. Authentication and account limits are still
+        /// enforced by the same API used by the window.
+        /// </summary>
+        public static async Task<Result<bool>> CreateAndLinkProject(
+            string projectName,
+            bool editorProfile)
+        {
+            if (string.IsNullOrWhiteSpace(projectName))
+                return Result<bool>.Fail("A project name is required.");
+
+            if (!PurrPackageManagerAuth.HasApiKey())
+            {
+                return Result<bool>.Fail(
+                    "Sign in to PurrNet before creating a PurrServices project.");
+            }
+
+            try
+            {
+                var result = await PurrServicesAPI.CreateProject(
+                    PurrPackageManagerAuth.GetApiKey(),
+                    projectName.Trim());
+                if (!result.Success)
+                    return Result<bool>.Fail(result.Error);
+
+                var project = result.Value?.project;
+                if (project == null ||
+                    string.IsNullOrWhiteSpace(project.id) ||
+                    string.IsNullOrWhiteSpace(project.publicKey))
+                {
+                    return Result<bool>.Fail(
+                        "The project was created, but its runtime credentials were missing. " +
+                        "Open PurrServices to finish linking it.");
+                }
+
+                PurrServicesProjectLink.Link(
+                    project,
+                    editorProfile ? PurrServicesProfile.Editor : PurrServicesProfile.Build);
+                return Result<bool>.Ok(true);
+            }
+            catch (Exception exception)
+            {
+                return Result<bool>.Fail(exception.Message);
+            }
         }
 
         static PurrServicesSetupWindow OpenWindow()
