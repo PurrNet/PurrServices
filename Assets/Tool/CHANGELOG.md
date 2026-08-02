@@ -1,3 +1,10 @@
+## [1.1.2-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.1...v1.1.2-beta.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* Create & Link ([b5b5345](https://github.com/PurrNet/PurrServices/commit/b5b5345c85ff665a116ffe698d14e2099d512f41))
+
 ## [1.1.1](https://github.com/PurrNet/PurrServices/compare/v1.1.0...v1.1.1) (2026-08-02)
 
 
