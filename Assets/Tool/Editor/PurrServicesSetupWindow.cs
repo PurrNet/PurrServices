@@ -69,10 +69,31 @@ namespace PurrNet.Services.Editor
         [MenuItem("Tools/PurrNet/PurrServices", false, -98)]
         public static void ShowWindow()
         {
+            OpenWindow();
+        }
+
+        /// <summary>
+        /// Opens PurrServices with its project-creation form expanded and optionally
+        /// prefilled. The window retains ownership of authentication, project-limit
+        /// errors, creation, and runtime-profile linking.
+        /// </summary>
+        public static void ShowCreateProject(string suggestedName = null)
+        {
+            var window = OpenWindow();
+            window._showCreateField = true;
+            if (!string.IsNullOrWhiteSpace(suggestedName))
+                window._newProjectName = suggestedName.Trim();
+            window.Focus();
+            window.Repaint();
+        }
+
+        static PurrServicesSetupWindow OpenWindow()
+        {
             var window = GetWindow<PurrServicesSetupWindow>();
             var icon = Resources.Load<Texture2D>("purricon");
             window.titleContent = new GUIContent("PurrServices", icon);
             window.minSize = new Vector2(MIN_WINDOW_WIDTH, 520);
+            return window;
         }
 
         void InitStyles()
