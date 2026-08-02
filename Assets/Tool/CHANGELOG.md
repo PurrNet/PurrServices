@@ -1,3 +1,17 @@
+## [1.1.1](https://github.com/PurrNet/PurrServices/compare/v1.1.0...v1.1.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* expose public API ([828566b](https://github.com/PurrNet/PurrServices/commit/828566b716be4a18dbc8aabc181610fbac420e45))
+
+## [1.1.1-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.0...v1.1.1-beta.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* expose public API ([828566b](https://github.com/PurrNet/PurrServices/commit/828566b716be4a18dbc8aabc181610fbac420e45))
+
 # [1.1.0](https://github.com/PurrNet/PurrServices/compare/v1.0.0...v1.1.0) (2026-08-02)
 
 
