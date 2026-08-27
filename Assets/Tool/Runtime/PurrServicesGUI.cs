@@ -10,7 +10,7 @@ namespace PurrNet.Services
     [AddComponentMenu("PurrNet/Services/PurrServicesGUI")]
     public class PurrServicesGUI : MonoBehaviour
     {
-        enum Tab { Auth, Lobbies, ActiveLobby, Chat, Edgegap, Log }
+        enum Tab { Auth, Lobbies, ActiveLobby, Chat, Log }
 
         // --- Window state ---
         bool _open;
@@ -58,11 +58,6 @@ namespace PurrNet.Services
         // --- Scroll positions ---
         Vector2 _contentScroll;
 
-        // --- Edgegap state ---
-        string _deployRequestId;
-        EdgegapStatusResponse _lastDeployStatus;
-        bool _deployPolling;
-
         // --- Busy guard ---
         bool _busy;
 
@@ -97,7 +92,6 @@ namespace PurrNet.Services
             DrawTabButton("Lobbies", Tab.Lobbies);
             DrawTabButton("Active Lobby", Tab.ActiveLobby);
             DrawTabButton("Chat", Tab.Chat);
-            DrawTabButton("Edgegap", Tab.Edgegap);
             DrawTabButton("Log", Tab.Log);
             GUILayout.EndHorizontal();
 
@@ -111,7 +105,6 @@ namespace PurrNet.Services
                 case Tab.Lobbies:     DrawLobbiesTab(); break;
                 case Tab.ActiveLobby: DrawActiveLobbyTab(); break;
                 case Tab.Chat:        DrawChatTab(); break;
-                case Tab.Edgegap:     DrawEdgegapTab(); break;
                 case Tab.Log:         DrawLogTab(); break;
             }
 
@@ -564,154 +557,6 @@ namespace PurrNet.Services
             Log($"Lobbies.SetPlayerMetadataAsync({_playerMetaKey}={_playerMetaValue})");
             var r = await PurrServices.instance.lobbies.SetPlayerMetadataAsync(_activeLobbyId, meta);
             if (r.success) Log("SetPlayerMeta OK"); else LogError($"SetPlayerMeta FAILED — {r.error}");
-        }
-
-        // ===================== EDGEGAP TAB =====================
-
-        void DrawEdgegapTab()
-        {
-            GUILayout.Label("--- Deploy Server ---");
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Deploy") && !_busy)
-                RunAsync(EdgegapDeployAsync());
-            if (GUILayout.Button("Deploy & Wait") && !_busy)
-                RunAsync(EdgegapDeployAndWaitAsync());
-            GUILayout.EndHorizontal();
-
-            if (_deployPolling)
-                GUILayout.Label("Waiting for the deployment to become ready...");
-
-            GUILayout.Space(8);
-            GUILayout.Label("--- Active Deployment ---");
-
-            if (!string.IsNullOrEmpty(_deployRequestId))
-            {
-                GUILayout.Label($"Request ID: {_deployRequestId}");
-                GUILayout.Label($"Status: {_lastDeployStatus.status ?? "unknown"}");
-                GUILayout.Label($"Ready: {_lastDeployStatus.ready}");
-                GUILayout.Label($"FQDN: {_lastDeployStatus.fqdn ?? "—"}");
-                GUILayout.Label($"Public IP: {_lastDeployStatus.publicIp ?? "—"}");
-
-                if (_lastDeployStatus.ports != null)
-                {
-                    GUILayout.Space(4);
-                    GUILayout.Label("Ports:");
-                    foreach (var kv in _lastDeployStatus.ports)
-                    {
-                        GUILayout.Label($"  {kv.Key}: {kv.Value.external} ({kv.Value.protocol})");
-                    }
-                }
-
-                if (_lastDeployStatus.error)
-                {
-                    GUILayout.Label($"Error: {_lastDeployStatus.errorDetail ?? "unknown"}");
-                }
-
-                GUILayout.Space(4);
-
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Refresh Status") && !_busy)
-                    RunAsync(EdgegapGetStatusAsync());
-                if (GUILayout.Button("Stop") && !_busy)
-                    RunAsync(EdgegapStopAsync());
-                GUILayout.EndHorizontal();
-            }
-            else
-            {
-                GUILayout.Label("No active deployment. Press Deploy to spin up a server.");
-            }
-        }
-
-        async Task EdgegapDeployAsync()
-        {
-            Log("Edgegap.DeployAsync()");
-            var r = await PurrServices.instance.edgegap.DeployAsync();
-            if (r.success)
-            {
-                _deployRequestId = r.requestId;
-                _lastDeployStatus = default;
-                Log($"Deploy OK — requestId={Truncate(r.requestId, 16)}");
-            }
-            else
-            {
-                LogError($"Deploy FAILED — {r.error}");
-            }
-        }
-
-        async Task EdgegapDeployAndWaitAsync()
-        {
-            Log("Edgegap.DeployAndWaitAsync()");
-            _deployPolling = true;
-
-            DeploymentStatusResult r;
-            try
-            {
-                r = await PurrServices.instance.edgegap.DeployAndWaitAsync();
-            }
-            finally
-            {
-                _deployPolling = false;
-            }
-
-            if (r.success)
-            {
-                _deployRequestId = r.deployment.requestId;
-                _lastDeployStatus = r.deployment;
-                Log($"Deploy+Wait OK — ready at {r.deployment.publicIp}:{GetFirstPort(r.deployment)}");
-            }
-            else
-            {
-                if (!string.IsNullOrEmpty(r.deployment.requestId))
-                {
-                    _deployRequestId = r.deployment.requestId;
-                    _lastDeployStatus = r.deployment;
-                }
-                LogError($"Deploy+Wait FAILED — {r.error}");
-            }
-        }
-
-        async Task EdgegapGetStatusAsync()
-        {
-            if (string.IsNullOrEmpty(_deployRequestId)) return;
-
-            Log($"Edgegap.GetStatusAsync({Truncate(_deployRequestId, 16)})");
-            var r = await PurrServices.instance.edgegap.GetStatusAsync(_deployRequestId);
-            if (r.success)
-            {
-                _lastDeployStatus = r.deployment;
-                Log($"Status OK — {r.deployment.status}, ready={r.deployment.ready}");
-            }
-            else
-            {
-                LogError($"Status FAILED — {r.error}");
-            }
-        }
-
-        async Task EdgegapStopAsync()
-        {
-            if (string.IsNullOrEmpty(_deployRequestId)) return;
-
-            Log($"Edgegap.StopAsync({Truncate(_deployRequestId, 16)})");
-            var r = await PurrServices.instance.edgegap.StopAsync(_deployRequestId);
-            if (r.success)
-            {
-                Log($"Stop OK — {Truncate(r.requestId, 16)}");
-                _deployRequestId = null;
-                _lastDeployStatus = default;
-            }
-            else
-            {
-                LogError($"Stop FAILED — {r.error}");
-            }
-        }
-
-        static string GetFirstPort(EdgegapStatusResponse status)
-        {
-            if (status.ports == null) return "—";
-            foreach (var kv in status.ports)
-                return $"{kv.Value.external}";
-            return "—";
         }
 
         // ===================== CHAT TAB =====================
