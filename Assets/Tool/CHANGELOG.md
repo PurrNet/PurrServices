@@ -1,3 +1,10 @@
+## [1.1.2-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.1.2-beta.1...v1.1.2-beta.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* remove edgegap service ([ea16409](https://github.com/PurrNet/PurrServices/commit/ea164097348d4209cf72a496e13cbec1fe3c0074))
+
 ## [1.1.2-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.1...v1.1.2-beta.1) (2026-08-02)
 
 
