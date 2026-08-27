@@ -1,3 +1,17 @@
+## [1.1.2-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.1.2-beta.1...v1.1.2-beta.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* remove edgegap service ([ea16409](https://github.com/PurrNet/PurrServices/commit/ea164097348d4209cf72a496e13cbec1fe3c0074))
+
+## [1.1.2-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.1...v1.1.2-beta.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* Create & Link ([b5b5345](https://github.com/PurrNet/PurrServices/commit/b5b5345c85ff665a116ffe698d14e2099d512f41))
+
 ## [1.1.1](https://github.com/PurrNet/PurrServices/compare/v1.1.0...v1.1.1) (2026-08-02)
 
 
@@ -67,9 +81,7 @@
 
 ### Features
 
-* add Edgegap service and GUI integration for server deployment ([3f1ea5e](https://github.com/PurrNet/PurrServices/commit/3f1ea5e1b100b17dccba6bf2db2100c5e623ef25))
 * better lobby searching ([afee874](https://github.com/PurrNet/PurrServices/commit/afee87409128a257a056b04bd18fca6fc38eccd9))
-* edgegap clear all my deployments ([8d8effa](https://github.com/PurrNet/PurrServices/commit/8d8effab9625ec6dd6bc342a35c649f522423a1a))
 * PurrTelemetry ([7230866](https://github.com/PurrNet/PurrServices/commit/723086628cb7724ae9448e7aa1b6de8fc3ca9f54))
 
 # [1.0.0-beta.16](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-07-30)
@@ -124,10 +136,6 @@
 # [1.0.0-beta.8](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-04-13)
 
 
-### Features
-
-* edgegap clear all my deployments ([8d8effa](https://github.com/PurrNet/PurrServices/commit/8d8effab9625ec6dd6bc342a35c649f522423a1a))
-
 # [1.0.0-beta.7](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-04-10)
 
 
@@ -135,10 +143,6 @@
 
 * handle null data array in HandleData method ([eec481d](https://github.com/PurrNet/PurrServices/commit/eec481d064e4c77bf0f8c96fd75d8f61ddacdd17))
 
-
-### Features
-
-* add Edgegap service and GUI integration for server deployment ([3f1ea5e](https://github.com/PurrNet/PurrServices/commit/3f1ea5e1b100b17dccba6bf2db2100c5e623ef25))
 
 # [1.0.0-beta.6](https://github.com/PurrNet/PurrServices/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-03-18)
 
