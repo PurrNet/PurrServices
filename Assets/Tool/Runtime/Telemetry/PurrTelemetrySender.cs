@@ -15,10 +15,14 @@ namespace PurrNet.Services.Telemetry
     {
         const string EventsPath = "/api/services/telemetry/events";
 
+        const string EventIdProperty = "purr_event_id";
+
         static readonly object _lock = new();
         static readonly List<EventPayload> _buffer = new();
+        static readonly List<EventPayload> _persistedThisQuit = new();
         static readonly System.Random _random = new();
 
+        static EventPayload[] _inFlight;
         static PurrTelemetryRunner _runner;
         static bool _flushInFlight;
         static bool _flushRequested;
@@ -42,6 +46,9 @@ namespace PurrNet.Services.Telemetry
 
                 EnsureRunner();
                 TryReplayPersisted();
+
+                Application.quitting -= PersistPending;
+                Application.quitting += PersistPending;
             }
             catch (Exception e)
             {
@@ -59,10 +66,13 @@ namespace PurrNet.Services.Telemetry
                 var trimmed = eventName.Trim();
                 if (trimmed.Length == 0 || trimmed.Length > 128) return;
 
+                var properties = CopyProperties(props) ?? new Dictionary<string, object>(1);
+                properties[EventIdProperty] = Guid.NewGuid().ToString("N");
+
                 var ev = new EventPayload
                 {
                     EventName = trimmed,
-                    Properties = CopyProperties(props),
+                    Properties = properties,
                     Source = PurrTelemetry.CurrentSource,
                     OccurredAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
                 };
@@ -147,6 +157,7 @@ namespace PurrNet.Services.Telemetry
                         batch = new EventPayload[take];
                         _buffer.CopyTo(0, batch, 0, take);
                         _buffer.RemoveRange(0, take);
+                        _inFlight = batch;
                     }
 
                     try
@@ -156,6 +167,14 @@ namespace PurrNet.Services.Telemetry
                     catch (Exception e)
                     {
                         PurrTelemetry.LogIfEditor(e);
+                    }
+                    finally
+                    {
+                        lock (_lock)
+                        {
+                            if (ReferenceEquals(_inFlight, batch))
+                                _inFlight = null;
+                        }
                     }
                 }
             }
@@ -263,9 +282,24 @@ namespace PurrNet.Services.Telemetry
             EventPayload[] snapshot;
             lock (_lock)
             {
-                if (_buffer.Count == 0) return;
-                snapshot = _buffer.ToArray();
-                _buffer.Clear();
+                bool added = false;
+
+                if (_inFlight != null)
+                {
+                    _persistedThisQuit.AddRange(_inFlight);
+                    _inFlight = null;
+                    added = true;
+                }
+
+                if (_buffer.Count > 0)
+                {
+                    _persistedThisQuit.AddRange(_buffer);
+                    _buffer.Clear();
+                    added = true;
+                }
+
+                if (!added) return;
+                snapshot = _persistedThisQuit.ToArray();
             }
 
             try

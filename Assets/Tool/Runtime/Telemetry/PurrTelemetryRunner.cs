@@ -26,7 +26,6 @@ namespace PurrNet.Services.Telemetry
         {
             try
             {
-                _ = PurrTelemetrySender.FlushAsync();
                 PurrTelemetrySender.PersistPending();
             }
             catch (Exception e) { PurrTelemetry.LogIfEditor(e); }
