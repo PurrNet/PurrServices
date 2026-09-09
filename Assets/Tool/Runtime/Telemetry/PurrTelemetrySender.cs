@@ -17,12 +17,15 @@ namespace PurrNet.Services.Telemetry
 
         const string EventIdProperty = "purr_event_id";
 
+        const float QuitFlushBudgetSeconds = 1.5f;
+
         static readonly object _lock = new();
         static readonly List<EventPayload> _buffer = new();
         static readonly List<EventPayload> _persistedThisQuit = new();
         static readonly System.Random _random = new();
 
         static EventPayload[] _inFlight;
+        static UnityWebRequest _inFlightRequest;
         static PurrTelemetryRunner _runner;
         static bool _flushInFlight;
         static bool _flushRequested;
@@ -47,8 +50,8 @@ namespace PurrNet.Services.Telemetry
                 EnsureRunner();
                 TryReplayPersisted();
 
-                Application.quitting -= PersistPending;
-                Application.quitting += PersistPending;
+                Application.quitting -= OnQuitting;
+                Application.quitting += OnQuitting;
             }
             catch (Exception e)
             {
@@ -212,6 +215,8 @@ namespace PurrNet.Services.Telemetry
                 req.SetRequestHeader("Content-Type", "application/json");
                 req.SetRequestHeader("Authorization", $"Bearer {publicKey}");
 
+                lock (_lock) _inFlightRequest = req;
+
                 try
                 {
                     await req.SendWebRequest();
@@ -219,28 +224,19 @@ namespace PurrNet.Services.Telemetry
                 catch
                 {
                 }
+                finally
+                {
+                    lock (_lock)
+                    {
+                        if (ReferenceEquals(_inFlightRequest, req))
+                            _inFlightRequest = null;
+                    }
+                }
+
+                if (IsConsumed(req))
+                    return;
 
                 int status = (int)req.responseCode;
-
-                if (status >= 200 && status < 300)
-                    return;
-
-                if (status == 401)
-                {
-                    if (Application.isEditor && !_unauthorizedLogged)
-                    {
-                        Debug.LogWarning("[PurrTelemetry] 401 Unauthorized. Re-link the project from Tools/PurrNet/PurrServices.");
-                        _unauthorizedLogged = true;
-                    }
-                    return;
-                }
-
-                if (status == 400 || status == 403)
-                {
-                    if (Application.isEditor)
-                        Debug.LogWarning($"[PurrTelemetry] {status} dropping batch: {SafeBody(req)}");
-                    return;
-                }
 
                 if (attempt + 1 < PurrTelemetrySettings.MaxRetries)
                 {
@@ -253,6 +249,147 @@ namespace PurrNet.Services.Telemetry
                     Debug.LogWarning($"[PurrTelemetry] Giving up after {PurrTelemetrySettings.MaxRetries} attempts (status {status}).");
                 return;
             }
+        }
+
+        static bool IsConsumed(UnityWebRequest req)
+        {
+            int status = (int)req.responseCode;
+
+            if (status >= 200 && status < 300)
+                return true;
+
+            if (status == 401)
+            {
+                if (Application.isEditor && !_unauthorizedLogged)
+                {
+                    Debug.LogWarning("[PurrTelemetry] 401 Unauthorized. Re-link the project from Tools/PurrNet/PurrServices.");
+                    _unauthorizedLogged = true;
+                }
+                return true;
+            }
+
+            if (status == 400 || status == 403)
+            {
+                if (Application.isEditor)
+                    Debug.LogWarning($"[PurrTelemetry] {status} dropping batch: {SafeBody(req)}");
+                return true;
+            }
+
+            return false;
+        }
+
+        static void OnQuitting()
+        {
+            try
+            {
+                if (!Application.isEditor)
+                    SendPendingBlocking(QuitFlushBudgetSeconds);
+            }
+            catch (Exception e)
+            {
+                PurrTelemetry.LogIfEditor(e);
+            }
+
+            PersistPending();
+        }
+
+        static void SendPendingBlocking(double budgetSeconds)
+        {
+            if (!PurrTelemetrySettings.isLinked) return;
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+
+            EventPayload[] inFlight;
+            UnityWebRequest inFlightRequest;
+            lock (_lock)
+            {
+                inFlight = _inFlight;
+                inFlightRequest = _inFlightRequest;
+            }
+
+            if (inFlight != null && inFlightRequest != null)
+            {
+                bool consumed = false;
+                try
+                {
+                    while (!inFlightRequest.isDone && clock.Elapsed.TotalSeconds < budgetSeconds)
+                        Thread.Sleep(5);
+                    consumed = inFlightRequest.isDone && IsConsumed(inFlightRequest);
+                }
+                catch (Exception e)
+                {
+                    PurrTelemetry.LogIfEditor(e);
+                }
+
+                if (consumed)
+                {
+                    lock (_lock)
+                    {
+                        if (ReferenceEquals(_inFlight, inFlight))
+                            _inFlight = null;
+                    }
+                }
+            }
+
+            while (clock.Elapsed.TotalSeconds < budgetSeconds)
+            {
+                EventPayload[] batch;
+                lock (_lock)
+                {
+                    if (_buffer.Count == 0) return;
+                    int take = Math.Min(PurrTelemetrySettings.MaxBatchSize, _buffer.Count);
+                    batch = new EventPayload[take];
+                    _buffer.CopyTo(0, batch, 0, take);
+                    _buffer.RemoveRange(0, take);
+                }
+
+                if (SendBatchBlocking(batch, budgetSeconds - clock.Elapsed.TotalSeconds))
+                    continue;
+
+                lock (_lock) _buffer.InsertRange(0, batch);
+                return;
+            }
+        }
+
+        static bool SendBatchBlocking(EventPayload[] batch, double budgetSeconds)
+        {
+            if (budgetSeconds <= 0.05) return false;
+
+            byte[] bytes;
+            try
+            {
+                var body = JsonConvert.SerializeObject(new BatchBody { Events = batch },
+                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                bytes = Encoding.UTF8.GetBytes(body);
+            }
+            catch (Exception e)
+            {
+                PurrTelemetry.LogIfEditor(e);
+                return true;
+            }
+
+            var url = PurrTelemetrySettings.baseUrl.TrimEnd('/') + EventsPath;
+            using var req = new UnityWebRequest(url, "POST")
+            {
+                uploadHandler = new UploadHandlerRaw(bytes),
+                downloadHandler = new DownloadHandlerBuffer(),
+                timeout = Math.Max(1, (int)Math.Ceiling(budgetSeconds))
+            };
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.SetRequestHeader("Authorization", $"Bearer {PurrTelemetrySettings.publicKey}");
+
+            var op = req.SendWebRequest();
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            while (!op.isDone && clock.Elapsed.TotalSeconds < budgetSeconds)
+                Thread.Sleep(5);
+
+            if (!op.isDone)
+            {
+                req.Abort();
+                return false;
+            }
+
+            return IsConsumed(req);
         }
 
         static int ComputeBackoffMs(int attempt)

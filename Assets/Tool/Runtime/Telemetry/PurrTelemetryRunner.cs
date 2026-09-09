@@ -21,14 +21,5 @@ namespace PurrNet.Services.Telemetry
             }
             catch (Exception e) { PurrTelemetry.LogIfEditor(e); }
         }
-
-        void OnApplicationQuit()
-        {
-            try
-            {
-                PurrTelemetrySender.PersistPending();
-            }
-            catch (Exception e) { PurrTelemetry.LogIfEditor(e); }
-        }
     }
 }
