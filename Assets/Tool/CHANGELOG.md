@@ -1,3 +1,10 @@
+## [1.1.3-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.1.3-beta.1...v1.1.3-beta.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* Send timing issue ([cee0dee](https://github.com/PurrNet/PurrServices/commit/cee0dee53d0254f10e2112ca9c3901d5808f6974))
+
 ## [1.1.3-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.2...v1.1.3-beta.1) (2026-09-08)
 
 
