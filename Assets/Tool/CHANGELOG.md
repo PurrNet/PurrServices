@@ -1,3 +1,11 @@
+## [1.1.3](https://github.com/PurrNet/PurrServices/compare/v1.1.2...v1.1.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* improvements to persisted data quit ([618f46d](https://github.com/PurrNet/PurrServices/commit/618f46dc777f018f2b5755afeabbff6ce739de1f))
+* Send timing issue ([cee0dee](https://github.com/PurrNet/PurrServices/commit/cee0dee53d0254f10e2112ca9c3901d5808f6974))
+
 ## [1.1.3-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.1.3-beta.1...v1.1.3-beta.2) (2026-09-09)
 
 
