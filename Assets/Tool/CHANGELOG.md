@@ -1,3 +1,10 @@
+## [1.1.4-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.1.4-beta.1...v1.1.4-beta.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* allow to Unlink projects ([2048a4d](https://github.com/PurrNet/PurrServices/commit/2048a4d6698d9b537c7c818bfd779dc674b02ff8))
+
 ## [1.1.4-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.3...v1.1.4-beta.1) (2026-09-23)
 
 
