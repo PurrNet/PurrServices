@@ -1,3 +1,10 @@
+## [1.1.4-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.3...v1.1.4-beta.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* reconnect immediately on server drain and retry for around 3 minutes ([aa8bb8d](https://github.com/PurrNet/PurrServices/commit/aa8bb8d87287f21d5479514ebbb9e5226428d679))
+
 ## [1.1.3](https://github.com/PurrNet/PurrServices/compare/v1.1.2...v1.1.3) (2026-09-21)
 
 
