@@ -40,6 +40,13 @@ namespace PurrNet.Services.Editor
             SetConstant(ProjectNameKey(profile), project.name);
         }
 
+        internal static void Unlink(PurrServicesProfile profile)
+        {
+            DeleteConstant(ApiKeyKey(profile));
+            DeleteConstant(ProjectIdKey(profile));
+            DeleteConstant(ProjectNameKey(profile));
+        }
+
         internal static void SetEditorOverride(bool enabled)
         {
             SetConstant(PurrServicesSettings.KeyEditorOverride, enabled.ToString());

@@ -28,6 +28,9 @@ namespace PurrNet.Services
         LobbyConnectionState _state;
         RetryTimer _retryTimer;
         bool _intentionalDisconnect;
+        // The server said it is restarting and kept our seat: reconnect at
+        // once instead of waiting out the backoff.
+        bool _serverRequestedReconnect;
 
         public LobbyConnectionState state => _state;
         public LobbySnapshot currentSnapshot { get; private set; }
@@ -106,7 +109,15 @@ namespace PurrNet.Services
 
             if (!_intentionalDisconnect && !_retryTimer.retriesExhausted)
             {
-                _retryTimer.Start();
+                if (_serverRequestedReconnect)
+                {
+                    _serverRequestedReconnect = false;
+                    _retryTimer.Start(0f);
+                }
+                else
+                {
+                    _retryTimer.Start();
+                }
             }
             else if (_retryTimer.retriesExhausted && !_intentionalDisconnect)
             {
@@ -132,6 +143,7 @@ namespace PurrNet.Services
                     _state = LobbyConnectionState.Connected;
                     currentSnapshot = authMsg.snapshot;
                     _retryTimer.Reset();
+                    _serverRequestedReconnect = false;
                     onConnected?.Invoke();
                     onSnapshot?.Invoke(authMsg.snapshot);
                     break;
@@ -185,6 +197,13 @@ namespace PurrNet.Services
                 case "error":
                     var errMsg = WsMessageParser.ParseError(json);
                     onError?.Invoke(errMsg.message);
+                    break;
+
+                case "reconnect":
+                    // Sent right before a deploying server closes the socket. Our
+                    // lobby seat is held for a grace period; the close that follows
+                    // is not a failure and needs no backoff.
+                    _serverRequestedReconnect = true;
                     break;
 
                 case "ping":

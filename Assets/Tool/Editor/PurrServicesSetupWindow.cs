@@ -928,6 +928,21 @@ namespace PurrNet.Services.Editor
                     $"Active for {ProfileDisplayName(profile)}",
                     EditorStyles.boldLabel);
                 GUI.color = previousColor;
+
+                using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+                {
+                    if (GUILayout.Button("Unlink", GUILayout.Height(22), GUILayout.Width(70)) &&
+                        EditorUtility.DisplayDialog(
+                            "Unlink project",
+                            $"Stop using \"{SelectedAppDisplayName}\" for {ProfileDisplayName(profile)}? " +
+                            "Services and the relay will run unconfigured for this profile until another project is linked.",
+                            "Unlink", "Cancel"))
+                    {
+                        PurrServicesProjectLink.Unlink(profile);
+                        ReloadConfiguration();
+                        GUIUtility.ExitGUI();
+                    }
+                }
             }
             else
             {
