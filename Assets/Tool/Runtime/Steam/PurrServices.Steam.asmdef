@@ -1,0 +1,31 @@
+{
+    "name": "PurrServices.Steam",
+    "rootNamespace": "PurrNet.Services",
+    "references": [
+        "GUID:1de6d4b8537cdd546bff9f1e4c45a4c8",
+        "GUID:68bd7fdb68ef2684e982e8a9825b18a5"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "LinuxStandalone64",
+        "macOSStandalone",
+        "WindowsStandalone32",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "PURR_SERVICES_STEAMWORKS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.rlabrecque.steamworks.net",
+            "expression": "",
+            "define": "PURR_SERVICES_STEAMWORKS"
+        }
+    ],
+    "noEngineReferences": false
+}
