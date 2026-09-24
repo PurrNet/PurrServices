@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/PurrNet/PurrServices/compare/v1.1.4...v1.2.0) (2026-09-24)
+
+
+### Features
+
+* steam auth ([efe65de](https://github.com/PurrNet/PurrServices/commit/efe65ded90119bbcc8b709e0d55eaffd0c07c63c))
+
 # [1.2.0-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.1.4...v1.2.0-beta.1) (2026-09-24)
 
 
