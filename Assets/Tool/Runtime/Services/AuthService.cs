@@ -90,18 +90,30 @@ namespace PurrNet.Services
         public const string SteamTicketIdentity = "purrnet";
 
         /// <summary>
-        /// Signs in with a Steam Web API ticket (hex encoded). The server asks Steam who the
-        /// ticket belongs to, so the player id is <c>steam:&lt;steamid64&gt;</c> and the name is
-        /// their Steam persona name. Requires the Steam provider to be enabled and configured
-        /// (App ID + publisher Web API key) on the project's Auth page.
-        /// With Steamworks.NET installed, <c>PurrSteamAuth.LoginAsync()</c> does the ticket part for you.
+        /// Signs in with Steam; the player id is <c>steam:&lt;steamid64&gt;</c>. What counts depends
+        /// on the project's Auth page:
+        /// <list type="bullet">
+        /// <item><b>Verify with Steam</b>: <paramref name="ticketHex"/> (a hex Web API ticket for
+        /// <see cref="SteamTicketIdentity"/>) is required; the server asks Steam who it belongs to
+        /// and ignores the other arguments except as a name fallback.</item>
+        /// <item><b>Trust the game</b>: <paramref name="steamId"/> (SteamID64) is taken as is and the
+        /// name is <paramref name="displayName"/>; the ticket is ignored.</item>
+        /// </list>
+        /// Send everything you have and the game works in either mode.
+        /// With Steamworks.NET installed, <c>PurrSteamAuth.LoginAsync()</c> does all of it for you.
         /// </summary>
-        public async Task<AuthResult> LoginWithSteamAsync(string ticketHex, string displayName = null)
+        public async Task<AuthResult> LoginWithSteamAsync(string ticketHex, string displayName = null, string steamId = null)
         {
-            if (string.IsNullOrEmpty(ticketHex))
-                return new AuthResult { success = false, error = "Steam ticket is empty" };
+            if (string.IsNullOrEmpty(ticketHex) && string.IsNullOrEmpty(steamId))
+                return new AuthResult { success = false, error = "Steam sign-in needs a ticket or a Steam ID" };
 
-            var credentials = new Dictionary<string, string> { { "ticket", ticketHex } };
+            var credentials = new Dictionary<string, string>();
+
+            if (!string.IsNullOrEmpty(ticketHex))
+                credentials["ticket"] = ticketHex;
+
+            if (!string.IsNullOrEmpty(steamId))
+                credentials["steamId"] = steamId;
 
             if (!string.IsNullOrEmpty(displayName))
                 credentials["displayName"] = displayName;

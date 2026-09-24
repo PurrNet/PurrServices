@@ -25,27 +25,44 @@ namespace PurrNet.Services
     public static class PurrSteamAuth
     {
         /// <summary>
-        /// Gets a Web API ticket for <see cref="AuthService.SteamTicketIdentity"/> and signs in
-        /// with it. The server names the player from Steam; <paramref name="displayName"/> is
-        /// only used if Steam will not say (defaults to the local persona name).
+        /// Signs in with Steam. Sends a Web API ticket for <see cref="AuthService.SteamTicketIdentity"/>
+        /// together with the local Steam ID and persona name, so it works whichever mode the project's
+        /// Auth page is in: a verifying project names the player from Steam, a project that trusts the
+        /// game takes the Steam ID and <paramref name="displayName"/> (defaults to the persona name).
+        /// If no ticket can be had, it still tries with the Steam ID alone, which only a trusting
+        /// project accepts.
         /// </summary>
         public static async Task<AuthResult> LoginAsync(string displayName = null, float timeoutSeconds = 10f)
         {
+            string steamId;
+            try
+            {
+                steamId = SteamUser.GetSteamID().m_SteamID.ToString();
+                if (string.IsNullOrEmpty(displayName))
+                    displayName = SteamFriends.GetPersonaName();
+            }
+            catch (InvalidOperationException)
+            {
+                return new AuthResult { success = false, error = "Steam is not initialized (call SteamAPI.Init first)" };
+            }
+
             var ticket = await GetWebApiTicketAsync(timeoutSeconds);
-            if (ticket.error != null)
-                return new AuthResult { success = false, error = ticket.error };
 
             try
             {
-                if (string.IsNullOrEmpty(displayName))
-                    displayName = SteamFriends.GetPersonaName();
+                var result = await PurrServices.instance.auth.LoginWithSteamAsync(ticket.hex, displayName, steamId);
 
-                return await PurrServices.instance.auth.LoginWithSteamAsync(ticket.hex, displayName);
+                // Say why there was no ticket; the server's "needs a ticket" alone would hide it.
+                if (!result.success && ticket.error != null)
+                    result.error = $"{result.error} (no Steam ticket: {ticket.error})";
+
+                return result;
             }
             finally
             {
                 // The server has used it (or never will); a Web API ticket should not outlive that.
-                SteamUser.CancelAuthTicket(ticket.handle);
+                if (ticket.error == null)
+                    SteamUser.CancelAuthTicket(ticket.handle);
             }
         }
 
