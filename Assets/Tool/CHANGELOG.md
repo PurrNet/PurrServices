@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/PurrNet/PurrServices/compare/v1.2.0...v1.2.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* allow 'unauthenticated' steam login ([6ed37f3](https://github.com/PurrNet/PurrServices/commit/6ed37f37b40ee827928b825a24276c1cee119d32))
+
 ## [1.2.1-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.2.0...v1.2.1-beta.1) (2026-09-24)
 
 
