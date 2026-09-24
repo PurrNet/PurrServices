@@ -4,7 +4,7 @@ Unity client package for PurrNet's lobby and matchmaking backend services. Provi
 
 ## Features
 
-- **Authentication** - Device-based login, username/password registration and login
+- **Authentication** - Device-based login, username/password registration and login, Steam sign-in
 - **Lobby Management** - Create, join (by ID or code), leave, destroy, and list lobbies
 - **Real-time Connection** - WebSocket-based lobby connections with automatic reconnection and exponential backoff
 - **Player Management** - Kick players, manage metadata, track lobby state
@@ -29,7 +29,7 @@ https://github.com/PurrNet/PurrServices.git?path=Assets/Tool#dev
 
 ## Quick Start
 
-1. Open **Tools > PurrNet > PurrServices**. PurrServices initializes automatically at runtime, so no scene component is required. With no project linked, lobby and device authentication use the free development tier automatically, namespaced by Unity's `Application.identifier`. This tier is not intended for production; create and link a project before releasing your game.
+1. Open **Tools > PurrNet > PurrServices**. PurrServices initializes automatically at runtime, so no scene component is required. Sign in and create or link a project (**Create & Link**): every service request carries that project's key, and the server rejects requests without one.
 
    The selected project key and service URL are stored through PurrNet's `ApplicationConstants` and compiled into player builds.
 
@@ -49,6 +49,9 @@ await purr.auth.RegisterAsync("username", "password");
 
 // Or login with username/password
 await purr.auth.LoginWithPasswordAsync("username", "password");
+
+// Or sign in with Steam (see "Steam sign-in" below)
+await PurrSteamAuth.LoginAsync();
 ```
 
 3. **Create and join lobbies:**
@@ -71,3 +74,52 @@ var joined = await purr.lobbies.JoinByCodeAsync("ABC123");
 ```csharp
 var connection = purr.lobbies.Connect(lobbyId, playerToken);
 ```
+
+## Steam sign-in
+
+Players can sign in with their Steam account. Steam verifies who they are, so the
+player id is `steam:<steamid64>` and the display name is their Steam persona name.
+
+**On the website** (your project → **Auth**):
+
+1. Under **Steam**, enter your game's **App ID** and a **publisher Web API key**
+   (Steamworks → Users & Permissions → Manage Groups → your group → Web API key).
+   A personal key from steamcommunity.com/dev will not work: Steam only validates
+   tickets for apps the key's group owns. The key is stored encrypted and is never
+   shown again.
+2. Click **Check key with Steam** to confirm Steam accepts the key for that App ID.
+3. Switch on the **Steam** sign-in provider.
+
+Options: allow family-shared copies (default on; the player is the borrower),
+refuse accounts you banned as publisher (default on), refuse VAC-banned accounts
+(default off).
+
+**In Unity with [Steamworks.NET](https://github.com/rlabrecque/Steamworks.NET)**
+(installed through the Package Manager, `com.rlabrecque.steamworks.net`), the
+`PurrServices.Steam` assembly compiles automatically:
+
+```csharp
+// Steam must be initialized and SteamAPI.RunCallbacks() pumped every frame
+// (SteamManager or PurrNet's Steam transport do both).
+var result = await PurrSteamAuth.LoginAsync();
+if (!result.success)
+    Debug.LogError(result.error);
+```
+
+If Steamworks.NET was imported as a `.unitypackage` instead, add the scripting
+define `PURR_SERVICES_STEAMWORKS` to enable the assembly.
+
+**With another Steam wrapper** (e.g. Facepunch.Steamworks), request a Web API
+ticket for the identity `AuthService.SteamTicketIdentity` (`"purrnet"`) and pass
+it hex encoded:
+
+```csharp
+var ticket = await Steamworks.SteamUser.GetAuthTicketForWebApiAsync(AuthService.SteamTicketIdentity);
+var hex = BitConverter.ToString(ticket.Data).Replace("-", "");
+await PurrServices.instance.auth.LoginWithSteamAsync(hex);
+ticket.Cancel();
+```
+
+Errors: `401` Steam rejected the ticket, `403` refused by your options
+(family sharing, bans), `502` Steam rejected the project's Web API key, `503`
+Steam unreachable or Steam sign-in not configured.

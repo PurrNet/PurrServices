@@ -81,6 +81,34 @@ namespace PurrNet.Services
             return await LoginAsync("username-password", credentials);
         }
 
+        /// <summary>
+        /// The identity string for Steam Web API tickets. Pass it to
+        /// <c>SteamUser.GetAuthTicketForWebApi</c> (Steamworks.NET) or
+        /// <c>SteamUser.GetAuthTicketForWebApiAsync</c> (Facepunch.Steamworks);
+        /// the server validates tickets against exactly this value.
+        /// </summary>
+        public const string SteamTicketIdentity = "purrnet";
+
+        /// <summary>
+        /// Signs in with a Steam Web API ticket (hex encoded). The server asks Steam who the
+        /// ticket belongs to, so the player id is <c>steam:&lt;steamid64&gt;</c> and the name is
+        /// their Steam persona name. Requires the Steam provider to be enabled and configured
+        /// (App ID + publisher Web API key) on the project's Auth page.
+        /// With Steamworks.NET installed, <c>PurrSteamAuth.LoginAsync()</c> does the ticket part for you.
+        /// </summary>
+        public async Task<AuthResult> LoginWithSteamAsync(string ticketHex, string displayName = null)
+        {
+            if (string.IsNullOrEmpty(ticketHex))
+                return new AuthResult { success = false, error = "Steam ticket is empty" };
+
+            var credentials = new Dictionary<string, string> { { "ticket", ticketHex } };
+
+            if (!string.IsNullOrEmpty(displayName))
+                credentials["displayName"] = displayName;
+
+            return await LoginAsync("steam", credentials);
+        }
+
         public async Task<AuthResult> LoginAsync(string provider, Dictionary<string, string> credentials)
         {
             var request = new AuthRequest
