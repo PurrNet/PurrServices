@@ -77,25 +77,22 @@ var connection = purr.lobbies.Connect(lobbyId, playerToken);
 
 ## Steam sign-in
 
-Players can sign in with their Steam account; the player id is `steam:<steamid64>`.
-On the website (your project → **Auth** → **Steam**) pick how much to trust the game:
+Players can sign in with their Steam account. Steam verifies who they are, so the
+player id is `steam:<steamid64>` and the display name is their Steam persona name.
 
-- **Verify with Steam** (recommended). Steam vouches for the player, and the name is
-  their Steam persona name. Enter your game's **App ID** and a **publisher Web API
-  key** (Steamworks → Users & Permissions → Manage Groups → your group → Web API
-  key). A personal key from steamcommunity.com/dev will not work, and neither will
-  Valve's test app 480: Steam only validates tickets for apps the key's group owns.
-  The key is stored encrypted and never shown again; **Check key with Steam**
-  confirms Steam accepts it for that App ID. Options: allow family-shared copies
-  (default on; the player is the borrower), refuse accounts you banned as publisher
-  (default on), refuse VAC-banned accounts (default off).
-- **Trust the game.** No setup: the Steam ID and name the game reports are taken
-  as they are. Anyone with a modified client can sign in as any Steam account, so
-  use it while starting out, or when identity does not matter for your game.
-  Player ids stay the same when you switch to verifying later.
+**On the website** (your project → **Auth**):
 
-Then switch on the **Steam** sign-in provider. The game code is the same in both
-modes.
+1. Under **Steam**, enter your game's **App ID** and a **publisher Web API key**
+   (Steamworks → Users & Permissions → Manage Groups → your group → Web API key).
+   A personal key from steamcommunity.com/dev will not work, and neither will
+   Valve's test app 480: Steam only validates tickets for apps the key's group
+   owns. The key is stored encrypted and is never shown again.
+2. Click **Check key with Steam** to confirm Steam accepts the key for that App ID.
+3. Switch on the **Steam** sign-in provider.
+
+Options: allow family-shared copies (default on; the player is the borrower),
+refuse accounts you banned as publisher (default on), refuse VAC-banned accounts
+(default off).
 
 **In Unity with [Steamworks.NET](https://github.com/rlabrecque/Steamworks.NET)**
 (installed through the Package Manager, `com.rlabrecque.steamworks.net`), the
@@ -114,18 +111,15 @@ define `PURR_SERVICES_STEAMWORKS` to enable the assembly.
 
 **With another Steam wrapper** (e.g. Facepunch.Steamworks), request a Web API
 ticket for the identity `AuthService.SteamTicketIdentity` (`"purrnet"`) and pass
-it hex encoded, together with the Steam ID and name so a trusting project works
-too:
+it hex encoded:
 
 ```csharp
 var ticket = await Steamworks.SteamUser.GetAuthTicketForWebApiAsync(AuthService.SteamTicketIdentity);
 var hex = BitConverter.ToString(ticket.Data).Replace("-", "");
-await PurrServices.instance.auth.LoginWithSteamAsync(
-    hex, Steamworks.SteamClient.Name, Steamworks.SteamClient.SteamId.ToString());
+await PurrServices.instance.auth.LoginWithSteamAsync(hex, Steamworks.SteamClient.Name);
 ticket.Cancel();
 ```
 
-Errors: `400` the ticket (verifying) or Steam ID (trusting) is missing, `401`
-Steam rejected the ticket, `403` refused by your options (family sharing, bans),
-`502` Steam rejected the project's Web API key, `503` Steam unreachable or Steam
-sign-in not configured.
+Errors: `400` missing or malformed ticket, `401` Steam rejected the ticket, `403`
+refused by your options (family sharing, bans), `502` Steam rejected the
+project's Web API key, `503` Steam unreachable or Steam sign-in not configured.
