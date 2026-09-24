@@ -1,3 +1,10 @@
+## [1.2.2-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.2.1...v1.2.2-beta.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* undo steam unauth thing; bad move ([3f7f290](https://github.com/PurrNet/PurrServices/commit/3f7f290f05ee8cabb99cec4a28f58cfece9dbd79))
+
 ## [1.2.1](https://github.com/PurrNet/PurrServices/compare/v1.2.0...v1.2.1) (2026-09-24)
 
 
