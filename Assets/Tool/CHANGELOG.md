@@ -1,5 +1,10 @@
-## [1.2.2-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.2.1...v1.2.2-beta.1) (2026-09-24)
+## 1.3.0 (unreleased)
 
+- Add the player-authenticated matchmaking SDK, party tickets, ready checks, ratings and admission verification.
+- Add a separate runtime-configured trusted server client for allocation leases, results and failed-game recovery.
+- Add cancellable, finite-timeout HTTP requests, Retry-After parsing, and captured session contexts for race-safe cleanup.
+
+## [1.2.2-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.2.1...v1.2.2-beta.1) (2026-09-24)
 
 ### Bug Fixes
 

@@ -9,9 +9,13 @@ Unity client package for PurrNet's lobby and matchmaking backend services. Provi
 - **Real-time Connection** - WebSocket-based lobby connections with automatic reconnection and exponential backoff
 - **Player Management** - Kick players, manage metadata, track lobby state
 - **Chat** - Send and receive chat messages within lobbies
+- **Competitive matchmaking** - Party tickets, ready checks, skill/latency queues, private admission credentials, and dedicated or player-hosted assignments
+- **Trusted server client** - Allocation claims/renewal, connection publication, admission verification, results and failed-game recovery
 - **Debug GUI** - Built-in debug UI for testing all services at runtime
 
 ## Installation
+
+For matchmaking setup and the player/server API, see [Matchmaking integration](Assets/Tool/MATCHMAKING.md). The Unity SDK requires the matchmaking website service to be deployed and enabled for the project.
 
 ### Unity Package Manager (UPM)
 
