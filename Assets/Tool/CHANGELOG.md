@@ -1,3 +1,10 @@
+# [1.3.0-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.2.2-beta.1...v1.3.0-beta.1) (2026-10-30)
+
+
+### Features
+
+* add competitive matchmaking SDK ([23af6cf](https://github.com/PurrNet/PurrServices/commit/23af6cf73a128402152e4e4296a9ea30074a03d3))
+
 ## 1.3.0 (unreleased)
 
 - Add the player-authenticated matchmaking SDK, party tickets, ready checks, ratings and admission verification.
