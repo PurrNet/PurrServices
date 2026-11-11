@@ -1,3 +1,10 @@
+# [1.3.0-beta.4](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.3...v1.3.0-beta.4) (2026-11-11)
+
+
+### Features
+
+* relaxing latency limit settings for matchmaking queues ([ca8d16e](https://github.com/PurrNet/PurrServices/commit/ca8d16e2f7f0f90cc40f03c8042377953a808aa9))
+
 # [1.3.0-beta.3](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.2...v1.3.0-beta.3) (2026-11-11)
 
 
