@@ -1,3 +1,10 @@
+# [1.3.0-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.1...v1.3.0-beta.2) (2026-11-11)
+
+
+### Features
+
+* casual and competitive matchmaking queue types ([b528313](https://github.com/PurrNet/PurrServices/commit/b5283131e3ea87c242be42c64b0ee644791c87a2))
+
 # [1.3.0-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.2.2-beta.1...v1.3.0-beta.1) (2026-10-30)
 
 
