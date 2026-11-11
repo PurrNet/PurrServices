@@ -89,7 +89,8 @@ namespace PurrNet.Services
 
         internal static object ResultRequest(string resultId, int? winningTeam)
         {
-            if (winningTeam.HasValue && winningTeam != 0 && winningTeam != 1) throw new ArgumentOutOfRangeException(nameof(winningTeam));
+            // A team index in the match; the service checks it against the match's actual teams.
+            if (winningTeam.HasValue && (winningTeam < 0 || winningTeam > 15)) throw new ArgumentOutOfRangeException(nameof(winningTeam));
             return new MatchmakingResultRequest { resultId = resultId, winningTeam = winningTeam };
         }
     }

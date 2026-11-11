@@ -82,9 +82,14 @@ namespace PurrNet.Services
         public string region;
         public string hostPlayerId;
         public bool isHost;
-        /// <summary>A full team. A casual match may have started with fewer players than this.</summary>
+        /// <summary>A full team. A casual match may have started with smaller teams than this.</summary>
         public int teamSize;
-        /// <summary>One entry for a one-group match, two for opposing teams.</summary>
+        /// <summary>The teams a full match has. A casual match may have started with fewer.</summary>
+        public int maxTeams;
+        /// <summary>
+        /// The teams this match started with; a player's team is its index here. One
+        /// entry is co-op, two are opposing teams, one player per entry is a free-for-all.
+        /// </summary>
         public MatchmakingTeamMember[][] teams;
         public MatchmakingConnection connection;
         public string createdAt;
@@ -118,10 +123,12 @@ namespace PurrNet.Services
     {
         /// <summary><see cref="MatchmakingModes"/>.</summary>
         public string mode;
-        /// <summary>2 = two opposing teams, 1 = one group (co-op, free-for-all).</summary>
+        /// <summary>Teams in a full match: 1 is co-op, 2 is team versus team, more with one player each is a free-for-all.</summary>
         public int teams;
-        /// <summary>Players on a full team, or in a full group.</summary>
+        /// <summary>Players on a full team. <c>teams * teamSize</c> is at most 16.</summary>
         public int teamSize;
+        /// <summary>Casual: the fewest teams a match may start with after <see cref="fillSeconds"/>.</summary>
+        public int minTeams;
         /// <summary>Casual: the smallest team a match may start with after <see cref="fillSeconds"/>.</summary>
         public int minTeamSize;
         public int fillSeconds;

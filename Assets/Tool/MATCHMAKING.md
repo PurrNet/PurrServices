@@ -7,10 +7,12 @@ first. Whole parties are always kept together.
 A queue is one of two types (`MatchmakingModes`), reported as `config.mode` on
 a queue and `mode` on a match:
 
-- **Casual**: one group or two teams, hosted by a player over the PurrNet
-  relay. No ready check, no ratings, any sign-in, nothing to report. A match
-  may start short of full if the queue allows it (`teams[i].Length` can be
-  below `teamSize`). Players are released the moment the game starts.
+- **Casual**: any number of teams × players per team, up to 16 players (1 × 4
+  is co-op, 2 × 5 is 5v5, 8 × 1 is a free-for-all), hosted by a player over the
+  PurrNet relay. No ready check, no ratings, any sign-in, nothing to report. A
+  match may start short of full if the queue allows it: `teams.Length` can be
+  below `maxTeams` and `teams[i].Length` below `teamSize`. A player's team is
+  its index in `teams`. Players are released the moment the game starts.
 - **Competitive**: two full rated teams, a ready check, Steam or
   username/password sign-in, and a result reported by your trusted backend.
   Hosted on a dedicated server or by a player over the relay.
@@ -185,7 +187,7 @@ Server methods:
 - `VerifyAdmissionAsync(matchId, playerId, connectionToken)`: validate each
   incoming player before accepting them into gameplay.
 - `SubmitResultAsync(matchId, resultId, winningTeam)`: atomically finish a game
-  and apply server-owned ratings. Team indices are 0/1; `null` is a draw.
+  and apply server-owned ratings. The winner is a team index (0/1 for a competitive match); `null` is a draw.
 - `CancelMatchAsync(matchId, reason)`: release an invalid/failed game without
   rating changes. Reasons are `AllocationFailed`, `ServerUnavailable`, or
   `InvalidMatch`.

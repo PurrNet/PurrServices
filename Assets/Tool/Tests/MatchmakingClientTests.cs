@@ -85,7 +85,8 @@ namespace PurrNet.Services.Tests
                 CollectionAssert.AreEquivalent(new[] { "resultId", "winningTeam" }, http.body.Properties().Select(p => p.Name));
             }
             finally { JsonConvert.DefaultSettings = previous; }
-            Assert.Throws<ArgumentOutOfRangeException>(() => client.SubmitResultAsync("match", "result", 2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => client.SubmitResultAsync("match", "result", -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => client.SubmitResultAsync("match", "result", 16));
         }
 
         [Test]
@@ -166,6 +167,12 @@ namespace PurrNet.Services.Tests
             Assert.AreEqual(1, group.teams.Length, "a one-group match has no second team");
             Assert.AreEqual(3, group.teams[0].Length); Assert.AreEqual(4, group.teamSize, "it started one short of full");
             Assert.IsFalse(JsonConvert.SerializeObject(group).Contains("isCasual"), "helpers are not wire fields");
+
+            const string freeForAll = "{\"id\":\"f\",\"state\":\"active\",\"mode\":\"casual\",\"teamSize\":1,\"maxTeams\":8,"
+                + "\"teams\":[[{\"playerId\":\"a\"}],[{\"playerId\":\"b\"}],[{\"playerId\":\"c\"}]]}";
+            var ffa = JsonConvert.DeserializeObject<MatchmakingMatchData>(freeForAll);
+            Assert.AreEqual(3, ffa.teams.Length, "three of eight sides started");
+            Assert.AreEqual(8, ffa.maxTeams); Assert.AreEqual("c", ffa.teams[2][0].playerId);
         }
 
         [TestCase("pk_pub_client")]
