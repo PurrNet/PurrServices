@@ -1,3 +1,10 @@
+# [1.3.0-beta.3](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.2...v1.3.0-beta.3) (2026-11-11)
+
+
+### Features
+
+* matchmaking matches with any number of teams ([1a18920](https://github.com/PurrNet/PurrServices/commit/1a189208330527d223460bcabdc7ef7900eef4bf))
+
 # [1.3.0-beta.2](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.1...v1.3.0-beta.2) (2026-11-11)
 
 
