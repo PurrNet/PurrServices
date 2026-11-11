@@ -8,6 +8,7 @@
 ## 1.3.0 (unreleased)
 
 - Add the player-authenticated matchmaking SDK, party tickets, ready checks, ratings and admission verification.
+- Queues are `casual` or `competitive` (`MatchmakingModes`): casual matches have no ready check, ratings or required result, may be one group instead of two teams, and may start short of full. `MatchmakingQueue.regions` lists what to measure (the relay's regions for player-hosted queues).
 - Add a separate runtime-configured trusted server client for allocation leases, results and failed-game recovery.
 - Add cancellable, finite-timeout HTTP requests, Retry-After parsing, and captured session contexts for race-safe cleanup.
 

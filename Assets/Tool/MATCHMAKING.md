@@ -1,17 +1,38 @@
 # Matchmaking integration
 
-PurrServices 1.3.0 supplies the Unity client for the website's competitive
-matchmaking API. Enable the project's Matchmaking service and create queues in
-its dashboard first. Each queue selects a team size, ranked/casual policy,
-regions, skill limits, timeouts, season and either dedicated or player hosting.
-The service forms two teams and preserves whole parties.
+PurrServices 1.3.0 supplies the Unity client for the website's matchmaking API.
+Enable the project's Matchmaking service and create queues in its dashboard
+first. Whole parties are always kept together.
+
+A queue is one of two types (`MatchmakingModes`), reported as `config.mode` on
+a queue and `mode` on a match:
+
+- **Casual**: one group or two teams, hosted by a player over the PurrNet
+  relay. No ready check, no ratings, any sign-in, nothing to report. A match
+  may start short of full if the queue allows it (`teams[i].Length` can be
+  below `teamSize`). Players are released the moment the game starts.
+- **Competitive**: two full rated teams, a ready check, Steam or
+  username/password sign-in, and a result reported by your trusted backend.
+  Hosted on a dedicated server or by a player over the relay.
+
+PurrLobby drives all of this for you. The rest of this guide is for a custom
+integration.
 
 ## Player client
 
 `PurrServices.instance.matchmaking` uses the linked project's public key,
-current player session, scope and game compatibility, just like lobbies. Ranked
-queues require Steam or username/password authentication. Device identity is
-supported only by casual queues.
+current player session, scope and game compatibility, just like lobbies.
+
+### Regions
+
+Every ticket carries the player's latency to the regions its queue matches in.
+`ListQueuesAsync` says which: each queue has `regions` and `regionSource`.
+For `regionSource == "relay"` (every player-hosted queue) they are PurrNet
+relay regions; measure them with
+`PurrTransportUtils.MeasureRelayServersAsync(masterServer)` and send the
+entries whose `server.region` the queue lists. The match's `region` is then the
+relay region the host opens its room in. For `"queue"` they are your own
+server regions and you measure them yourself.
 
 Capture a client at the start of each search so an account or scope change
 cannot redirect its later cleanup request to another identity:
@@ -37,8 +58,8 @@ if (!created.success)
 var ticketId = created.data.id;
 ```
 
-Measure latency against your game's region probes; the SDK does not substitute
-made-up measurements. If a create response is lost, retry the **same** request
+Send only real measurements for the queue's regions; the SDK does not substitute
+made-up ones. If a create response is lost, retry the **same** request
 and `requestId`. A different search must use a new ID. Server-owned ratings are
 never supplied in a ticket request.
 
@@ -81,8 +102,9 @@ party/lobby UI; each member calls `JoinTicketAsync` using their own account.
 Never collect or share other players' session tokens. Every member must poll.
 
 A full ticket is `queued`; a selected ticket becomes `matched` and supplies a
-`matchId`. Poll the match and present a ready check while it is `ready`. Every
-player must explicitly accept. On a failed ready check, poll the ticket again:
+`matchId`. A casual match starts in `allocating` and never asks anyone to
+accept. For a competitive match, poll it and present a ready check while it is
+`ready`. Every player must explicitly accept. On a failed ready check, poll the ticket again:
 fully accepted parties may be requeued with their original age. Other parties
 leave the queue, and decliners/nonresponders receive a short cooldown.
 
@@ -96,9 +118,19 @@ For dedicated hosting, players wait for `active` and a non-null `connection`.
 They always join as clients. A trusted backend performs allocation below.
 
 For player hosting, the elected host sees `isHost = true` and a provisional
-connection during `allocating`. Its `serverAddress` defaults to a unique relay
-room. Load the game and start listening, then call `PublishConnectionAsync`.
-Other players receive the connection only after that acknowledgment. The SDK
+connection during `allocating`. Its `serverAddress` is a unique relay room, to
+be opened in relay region `region`. Load the game and start listening, then
+call `PublishConnectionAsync`. Other players receive the connection only after
+that acknowledgment.
+
+**The host keeps calling `GetMatchAsync` every 15 seconds while the game
+runs.** A casual match has no result to wait for: the service closes it
+(`completed`, reason `host_left`) once its host has been silent for the
+queue's heartbeat timeout, never less than 45 seconds. In a casual queue the
+players' seats are released when the match turns `active`, so each can search
+again as soon as they leave; `CancelTicketAsync` on a running casual game does
+nothing. If the casual host never publishes, the other parties return to the
+queue with their original wait. The SDK
 publishes only `serverAddress` and `serverPort`; it never echoes private
 admission tokens or trusts a caller-supplied host ID.
 

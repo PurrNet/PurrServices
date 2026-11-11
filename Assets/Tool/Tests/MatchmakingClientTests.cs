@@ -144,6 +144,30 @@ namespace PurrNet.Services.Tests
             Assert.IsNull(JsonConvert.DeserializeObject<MatchmakingResult>("{\"winningTeam\":null}").winningTeam);
         }
 
+        [Test]
+        public void QueueTypesShapesAndRelayRegionsAreReadFromTheService()
+        {
+            const string queues = "{\"queues\":[{\"id\":\"quick-play\",\"name\":\"Quick play\",\"regionSource\":\"relay\",\"regions\":[\"eu-central\",\"us-east\"],"
+                + "\"config\":{\"mode\":\"casual\",\"teams\":1,\"teamSize\":4,\"minTeamSize\":2,\"fillSeconds\":20,\"hosting\":\"player-hosted\",\"regions\":[]}},"
+                + "{\"id\":\"ranked\",\"name\":\"Ranked\",\"regionSource\":\"queue\",\"regions\":[\"eu\"],"
+                + "\"config\":{\"mode\":\"competitive\",\"teams\":2,\"teamSize\":2,\"minTeamSize\":2,\"hosting\":\"dedicated\",\"regions\":[\"eu\"]}}]}";
+            var list = JsonConvert.DeserializeObject<MatchmakingQueueList>(queues).queues;
+            Assert.IsTrue(list[0].usesRelayRegions);
+            CollectionAssert.AreEqual(new[] { "eu-central", "us-east" }, list[0].regions);
+            Assert.AreEqual(MatchmakingModes.Casual, list[0].config.mode);
+            Assert.AreEqual(1, list[0].config.teams); Assert.AreEqual(4, list[0].config.teamSize); Assert.AreEqual(2, list[0].config.minTeamSize);
+            Assert.IsFalse(list[1].usesRelayRegions);
+            Assert.AreEqual(MatchmakingModes.Competitive, list[1].config.mode);
+
+            const string match = "{\"id\":\"m\",\"state\":\"allocating\",\"mode\":\"casual\",\"hosting\":\"player-hosted\",\"region\":\"eu-central\",\"teamSize\":4,"
+                + "\"teams\":[[{\"playerId\":\"a\",\"accepted\":true},{\"playerId\":\"b\",\"accepted\":true},{\"playerId\":\"c\",\"accepted\":true}]]}";
+            var group = JsonConvert.DeserializeObject<MatchmakingMatchData>(match);
+            Assert.IsTrue(group.isCasual); Assert.IsTrue(group.isPlayerHosted);
+            Assert.AreEqual(1, group.teams.Length, "a one-group match has no second team");
+            Assert.AreEqual(3, group.teams[0].Length); Assert.AreEqual(4, group.teamSize, "it started one short of full");
+            Assert.IsFalse(JsonConvert.SerializeObject(group).Contains("isCasual"), "helpers are not wire fields");
+        }
+
         [TestCase("pk_pub_client")]
         [TestCase("pk_user")]
         [TestCase("")]

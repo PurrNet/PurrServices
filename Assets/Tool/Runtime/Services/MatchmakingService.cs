@@ -68,7 +68,7 @@ namespace PurrNet.Services
         public Task<HttpResult<MatchmakingAdmission>> VerifyAdmissionAsync(string matchId, string playerId, string connectionToken, CancellationToken cancellationToken = default) =>
             _http.PostAsync<MatchmakingAdmission>(MatchPath(matchId) + "/verify", new { playerId, connectionToken }, cancellationToken);
 
-        /// <summary>Casual player-hosted results only. Ranked results always require a trusted server.</summary>
+        /// <summary>Optional, casual queues only: the host records an outcome. Competitive results always require a trusted server.</summary>
         public Task<HttpResult<MatchmakingResult>> SubmitResultAsync(string matchId, string resultId, int? winningTeam, CancellationToken cancellationToken = default) =>
             _http.PostAsync<MatchmakingResult>(MatchPath(matchId) + "/result", ResultRequest(resultId, winningTeam), cancellationToken);
 

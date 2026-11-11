@@ -54,6 +54,21 @@ namespace PurrNet.Services
         public string hostId;
     }
 
+    /// <summary>The two queue types, as <c>mode</c> spells them on the wire.</summary>
+    public static class MatchmakingModes
+    {
+        /// <summary>No ready check, ratings or required result. A player hosts over the relay.</summary>
+        public const string Casual = "casual";
+        /// <summary>Two rated teams, a ready check, verified sign-in and trusted results.</summary>
+        public const string Competitive = "competitive";
+    }
+
+    public static class MatchmakingHosting
+    {
+        public const string Dedicated = "dedicated";
+        public const string PlayerHosted = "player-hosted";
+    }
+
     [Serializable]
     public sealed class MatchmakingMatchData
     {
@@ -61,16 +76,24 @@ namespace PurrNet.Services
         public string queueId;
         public string state;
         public string hosting;
-        public bool ranked;
+        /// <summary><see cref="MatchmakingModes"/>.</summary>
+        public string mode;
+        /// <summary>For a player-hosted match this is the relay region the host opens its room in.</summary>
         public string region;
         public string hostPlayerId;
         public bool isHost;
+        /// <summary>A full team. A casual match may have started with fewer players than this.</summary>
+        public int teamSize;
+        /// <summary>One entry for a one-group match, two for opposing teams.</summary>
         public MatchmakingTeamMember[][] teams;
         public MatchmakingConnection connection;
         public string createdAt;
         public string deadline;
         public MatchmakingResult result;
         public string reason;
+
+        [JsonIgnore] public bool isCasual => mode == MatchmakingModes.Casual;
+        [JsonIgnore] public bool isPlayerHosted => hosting == MatchmakingHosting.PlayerHosted;
     }
 
     [Serializable]
@@ -82,14 +105,28 @@ namespace PurrNet.Services
         public string id;
         public string name;
         public MatchmakingQueueConfig config;
+        /// <summary>The regions to measure latency against before searching this queue.</summary>
+        public string[] regions;
+        /// <summary>"relay": <see cref="regions"/> are PurrNet relay regions. "queue": the game's own server regions.</summary>
+        public string regionSource;
+
+        [JsonIgnore] public bool usesRelayRegions => regionSource == "relay";
     }
 
     [Serializable]
     public sealed class MatchmakingQueueConfig
     {
+        /// <summary><see cref="MatchmakingModes"/>.</summary>
+        public string mode;
+        /// <summary>2 = two opposing teams, 1 = one group (co-op, free-for-all).</summary>
+        public int teams;
+        /// <summary>Players on a full team, or in a full group.</summary>
         public int teamSize;
-        public bool ranked;
+        /// <summary>Casual: the smallest team a match may start with after <see cref="fillSeconds"/>.</summary>
+        public int minTeamSize;
+        public int fillSeconds;
         public string hosting;
+        /// <summary>Dedicated queues only. Use <see cref="MatchmakingQueue.regions"/> for what to measure.</summary>
         public string[] regions;
         public int initialRating;
         public int initialRange;
