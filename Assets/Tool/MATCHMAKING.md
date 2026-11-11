@@ -36,6 +36,16 @@ entries whose `server.region` the queue lists. The match's `region` is then the
 relay region the host opens its room in. For `"queue"` they are your own
 server regions and you measure them yourself.
 
+Send every region you measured, slow ones included. A player's latency limit
+starts at the queue's `maxLatencyMs` and relaxes with their own wait, by
+`latencyStepMs` every `latencyStepSeconds`, up to `latencyCeilingMs` (casual:
+250 ms to 400 ms by default; competitive: fixed unless the queue opts in). A
+ticket is accepted when any region is within the ceiling.
+
+On WebGL, do not wait between polls with `Task.Delay`: it never completes
+without a timer thread. Wait in frames instead (PurrLobby's
+`PurrServicesMatchGameAllocator.DelayAsync` does).
+
 Capture a client at the start of each search so an account or scope change
 cannot redirect its later cleanup request to another identity:
 

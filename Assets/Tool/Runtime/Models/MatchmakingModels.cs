@@ -142,7 +142,12 @@ namespace PurrNet.Services
         public int expansionStep;
         public int maxTeamRatingGap;
         public int maxPartyRatingSpread;
+        /// <summary>The latency to the match region a player accepts when they start searching.</summary>
         public int maxLatencyMs;
+        /// <summary>The most a player ever accepts: their own limit relaxes towards this as they wait.</summary>
+        public int latencyCeilingMs;
+        public int latencyStepMs;
+        public int latencyStepSeconds;
         public int ticketTtlSeconds;
         public int maxWaitSeconds;
         public int readyTimeoutSeconds;
