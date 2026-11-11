@@ -115,7 +115,14 @@ namespace PurrNet.Services
         /// <summary>"relay": <see cref="regions"/> are PurrNet relay regions. "queue": the game's own server regions.</summary>
         public string regionSource;
 
+        /// <summary>Archived queue IDs that redirect here. Searching one of them searches this queue.</summary>
+        public string[] aliases;
+
         [JsonIgnore] public bool usesRelayRegions => regionSource == "relay";
+
+        /// <summary>Whether a search for <paramref name="queueId"/> lands in this queue, directly or through a redirect.</summary>
+        public bool Serves(string queueId) =>
+            id == queueId || (aliases != null && Array.IndexOf(aliases, queueId) >= 0);
     }
 
     [Serializable]
