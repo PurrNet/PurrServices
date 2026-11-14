@@ -1,0 +1,27 @@
+{
+    "name": "PurrServices.Capture.Editor",
+    "rootNamespace": "PurrNet.Services.Capture",
+    "references": [
+        "PurrServices.Runtime",
+        "GUID:5a0ba52ecc0962c45a5f7f93997506a5"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.modules.physics",
+            "expression": "",
+            "define": "UNITY_PHYSICS_3D"
+        }
+    ],
+    "noEngineReferences": false
+}

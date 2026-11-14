@@ -1,0 +1,31 @@
+{
+    "name": "PurrServices.Capture.PurrNet.Editor",
+    "rootNamespace": "PurrNet.Services.Capture.PurrNet",
+    "references": [
+        "PurrServices.Capture.Editor",
+        "PurrServices.Runtime",
+        "GUID:6e20f757a1bae164fa42750dd2b27dcb",
+        "GUID:5a0ba52ecc0962c45a5f7f93997506a5"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "PURRSERVICES_HAS_PURRNET"
+    ],
+    "versionDefines": [
+        {
+            "name": "dev.purrnet.purrnet",
+            "expression": "",
+            "define": "PURRSERVICES_HAS_PURRNET"
+        }
+    ],
+    "noEngineReferences": false
+}
