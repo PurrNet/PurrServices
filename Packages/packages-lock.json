@@ -210,14 +210,13 @@
       "url": "https://packages.unity.com"
     },
     "dev.purrnet.essentials": {
-      "version": "https://github.com/PurrNet/PurrNet.git?path=/Assets/PurrNet/Essentials#v1.26.0-beta.31",
+      "version": "file:../../PurrNet/Assets/PurrNet/Essentials",
       "depth": 0,
-      "source": "git",
+      "source": "local",
       "dependencies": {
         "com.unity.nuget.mono-cecil": "1.11.4",
         "com.unity.nuget.newtonsoft-json": "3.2.1"
-      },
-      "hash": "9658d18a0801e2702792f19328de6f7582797754"
+      }
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
