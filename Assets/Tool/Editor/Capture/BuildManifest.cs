@@ -72,6 +72,22 @@ namespace PurrNet.Services.Capture
             return entry;
         }
 
+        /// <summary>A network object placed in a scene, described like a prefab under the id the netcode gives it there.</summary>
+        public JObject AddSceneObject(JObject sceneEntry, int id, GameObject root)
+        {
+            if (!(sceneEntry["objects"] is JArray objects))
+                sceneEntry["objects"] = objects = new JArray();
+
+            var entry = new JObject
+            {
+                ["id"] = id,
+                ["name"] = root.name,
+                ["colliders"] = DescribeColliders(root.transform, root.transform, null)
+            };
+            objects.Add(entry);
+            return entry;
+        }
+
         public string ToJson()
         {
             var root = new JObject

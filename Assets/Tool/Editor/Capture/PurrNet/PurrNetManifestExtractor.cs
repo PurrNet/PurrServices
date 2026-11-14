@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
+using PurrNet.Modules;
 using PurrNet.Utils;
 using UnityEditor;
 using UnityEngine;
@@ -20,6 +21,8 @@ namespace PurrNet.Services.Capture
             typeof(NetworkTransform).GetField("_syncRotation", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo SyncScaleField =
             typeof(NetworkTransform).GetField("_syncScale", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private PurrNetSchemaDescriber _schema;
 
         public string netcode => "purrnet";
 
@@ -60,6 +63,7 @@ namespace PurrNet.Services.Capture
 
             manifest.netcodeData["rpcs"] = DescribeRpcs();
             var schema = new PurrNetSchemaDescriber(Manifest.Entries);
+            _schema = schema;
             AddPrefabs(manifest, schema);
             manifest.netcodeData["types"] = schema.types;
             manifest.netcodeData["layouts"] = schema.layouts;
@@ -73,6 +77,32 @@ namespace PurrNet.Services.Capture
                 var manager = roots[i].GetComponentInChildren<NetworkManager>(true);
                 if (manager && manifest.tickRate == 0)
                     manifest.tickRate = manager.tickRate;
+            }
+
+            AddSceneObjects(manifest, scene, sceneEntry);
+        }
+
+        private void AddSceneObjects(BuildManifest manifest, Scene scene, JObject sceneEntry)
+        {
+            if (_schema == null)
+                return;
+
+            var identities = new List<NetworkIdentity>();
+            SceneObjectsModule.GetSceneIdentities(scene, identities);
+            var roots = new HashSet<NetworkIdentity>();
+
+            for (int i = 0; i < identities.Count; i++)
+            {
+                var identity = identities[i];
+                if (!identity)
+                    continue;
+
+                var root = identity.GetRootIdentity();
+                if (!root || !roots.Add(root) || root.skipSceneAutoSpawning)
+                    continue;
+
+                var entry = manifest.AddSceneObject(sceneEntry, -i - 2, root.gameObject);
+                entry["components"] = DescribeIdentities(root.gameObject, _schema);
             }
         }
 
