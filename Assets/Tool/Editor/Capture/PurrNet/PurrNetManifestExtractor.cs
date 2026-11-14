@@ -67,6 +67,7 @@ namespace PurrNet.Services.Capture
             AddPrefabs(manifest, schema);
             manifest.netcodeData["types"] = schema.types;
             manifest.netcodeData["layouts"] = schema.layouts;
+            manifest.netcodeData["hashes"] = schema.hashes;
         }
 
         public void ExtractScene(BuildManifest manifest, Scene scene, JObject sceneEntry)

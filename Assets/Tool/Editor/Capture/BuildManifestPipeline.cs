@@ -97,6 +97,7 @@ namespace PurrNet.Services.Capture
             }
 
             var entry = _current.AddScene(scene.buildIndex, scene.name, scene.GetRootGameObjects(), _extractor.IsNetworkObject);
+            entry["path"] = scene.path;
             if (_extractor is IBuildManifestSceneExtractor sceneExtractor)
                 sceneExtractor.ExtractScene(_current, scene, entry);
         }

@@ -23,6 +23,7 @@ namespace PurrNet.Services.Capture
 
         private readonly JObject _types = new JObject();
         private readonly JObject _layouts = new JObject();
+        private readonly JObject _hashes = new JObject();
 
         /// <summary>Values whose encoding the decoder implements itself; they need no layout.</summary>
         private static readonly HashSet<Type> BuiltIn = new HashSet<Type>
@@ -41,11 +42,20 @@ namespace PurrNet.Services.Capture
         /// <summary>How the values that cross the wire are laid out: generated structs field by field, enums by width.</summary>
         public JObject layouts => _layouts;
 
+        /// <summary>
+        /// PurrNet's type hash of every type described, and of the built-in value types: generic RPCs name their type
+        /// arguments by it, static RPCs their class.
+        /// </summary>
+        public JObject hashes => _hashes;
+
         public PurrNetSchemaDescriber(IEnumerable<RPCManifestEntry> rpcs)
         {
             _rpcsByType = rpcs.Where(e => e.declaringType != null)
                 .GroupBy(e => e.declaringType)
                 .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var type in BuiltIn)
+                Remember(type);
         }
 
         public static string NameOf(Type type)
@@ -73,8 +83,16 @@ namespace PurrNet.Services.Capture
             return builder.Append('>').ToString();
         }
 
+        private void Remember(Type type)
+        {
+            if (type == null || type.IsGenericParameter || type.ContainsGenericParameters)
+                return;
+            _hashes[Hasher.Hash(type).ToString()] = NameOf(type);
+        }
+
         public string Describe(Type type)
         {
+            Remember(type);
             string name = NameOf(type);
             if (_types.ContainsKey(name))
                 return name;
@@ -198,6 +216,7 @@ namespace PurrNet.Services.Capture
         /// <summary>Adds the layout of a value type, and of every type inside it, unless the decoder knows it already.</summary>
         public void DescribeValue(Type type)
         {
+            Remember(type);
             if (type == null || type.IsGenericParameter || BuiltIn.Contains(type))
                 return;
 
@@ -220,10 +239,21 @@ namespace PurrNet.Services.Capture
                 return;
             }
 
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+            {
+                var arguments = type.GetGenericArguments();
+                _layouts[name] = new JObject { ["kind"] = "map", ["key"] = NameOf(arguments[0]), ["element"] = NameOf(arguments[1]), ["sealed"] = type.IsSealed };
+                DescribeValue(arguments[0]);
+                DescribeValue(arguments[1]);
+                return;
+            }
+
+            if (type.IsGenericType && (type.GetGenericTypeDefinition() == typeof(List<>) ||
+                                       type.GetGenericTypeDefinition() == typeof(HashSet<>) ||
+                                       type.GetGenericTypeDefinition() == typeof(Queue<>)))
             {
                 var inner = type.GetGenericArguments()[0];
-                _layouts[name] = new JObject { ["kind"] = "list", ["element"] = NameOf(inner) };
+                _layouts[name] = new JObject { ["kind"] = "list", ["element"] = NameOf(inner), ["sealed"] = type.IsSealed };
                 DescribeValue(inner);
                 return;
             }
@@ -247,6 +277,7 @@ namespace PurrNet.Services.Capture
             {
                 ["kind"] = type.IsValueType ? "struct" : "class",
                 ["packer"] = packer,
+                ["sealed"] = type.IsSealed,
                 ["hash"] = Hasher.Hash(type)
             };
             _layouts[name] = layout;
