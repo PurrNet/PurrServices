@@ -272,6 +272,12 @@ namespace PurrNet.Services.Capture
                 return;
             }
 
+            if (typeof(NetworkIdentity).IsAssignableFrom(type))
+            {
+                _layouts[name] = new JObject { ["kind"] = "identity", ["sealed"] = type.IsSealed };
+                return;
+            }
+
             string packer = PackerKind(type);
             var layout = new JObject
             {
@@ -320,7 +326,7 @@ namespace PurrNet.Services.Capture
 
             try
             {
-                var field = typeof(Packer<>).MakeGenericType(type).GetField("WriteFunc", BindingFlags.Public | BindingFlags.Static);
+                var field = typeof(Packer<>).MakeGenericType(type).GetField("DirectWrite", BindingFlags.Public | BindingFlags.Static);
                 if (field?.GetValue(null) is Delegate writer)
                 {
                     var declaring = writer.Method.DeclaringType;
