@@ -1,5 +1,5 @@
 using System;
-using PurrNet.Utils;
+using PurrNet.Essentials;
 
 namespace PurrNet.Services.Editor
 {

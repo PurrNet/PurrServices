@@ -1,19 +1,31 @@
 using System;
 using System.Collections.Generic;
-using PurrNet.Pooling;
 
 namespace PurrNet.Services.Telemetry
 {
     public struct PurrTelemetryProps : IDisposable
     {
-        DisposableDictionary<string, object> _dict;
+        static readonly Stack<Dictionary<string, object>> _pool = new Stack<Dictionary<string, object>>();
+
+        Dictionary<string, object> _dict;
         bool _allocated;
+
+        static Dictionary<string, object> RentDictionary()
+        {
+            lock (_pool)
+            {
+                if (_pool.Count > 0)
+                    return _pool.Pop();
+            }
+
+            return new Dictionary<string, object>();
+        }
 
         public static PurrTelemetryProps Rent()
         {
             return new PurrTelemetryProps
             {
-                _dict = DisposableDictionary<string, object>.Create(),
+                _dict = RentDictionary(),
                 _allocated = true
             };
         }
@@ -22,7 +34,7 @@ namespace PurrNet.Services.Telemetry
         {
             if (!_allocated)
             {
-                _dict = DisposableDictionary<string, object>.Create();
+                _dict = RentDictionary();
                 _allocated = true;
             }
             _dict[key] = value;
@@ -36,7 +48,7 @@ namespace PurrNet.Services.Telemetry
             {
                 if (!_allocated)
                 {
-                    _dict = DisposableDictionary<string, object>.Create();
+                    _dict = RentDictionary();
                     _allocated = true;
                 }
                 _dict[key] = value;
@@ -45,12 +57,15 @@ namespace PurrNet.Services.Telemetry
 
         public int Count => _allocated ? _dict.Count : 0;
 
-        internal Dictionary<string, object> RawDictionary => _allocated ? _dict.dictionary : null;
+        internal Dictionary<string, object> RawDictionary => _allocated ? _dict : null;
 
         public void Dispose()
         {
             if (!_allocated) return;
-            _dict.Dispose();
+            _dict.Clear();
+            lock (_pool)
+                _pool.Push(_dict);
+            _dict = null;
             _allocated = false;
         }
     }

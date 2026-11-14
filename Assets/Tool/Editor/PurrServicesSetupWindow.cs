@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using PurrNet.Editor;
+using PurrNet.Essentials;
 using UnityEditor;
 using UnityEngine;
 
@@ -100,7 +100,7 @@ namespace PurrNet.Services.Editor
             if (string.IsNullOrWhiteSpace(projectName))
                 return Result<bool>.Fail("A project name is required.");
 
-            if (!PurrPackageManagerAuth.HasApiKey())
+            if (!PurrAuth.HasApiKey())
             {
                 return Result<bool>.Fail(
                     "Sign in to PurrNet before creating a PurrServices project.");
@@ -109,12 +109,12 @@ namespace PurrNet.Services.Editor
             try
             {
                 var result = await PurrServicesAPI.CreateProject(
-                    PurrPackageManagerAuth.GetApiKey(),
+                    PurrAuth.GetApiKey(),
                     projectName.Trim());
-                if (!result.Success)
-                    return Result<bool>.Fail(result.Error);
+                if (!result.success)
+                    return Result<bool>.Fail(result.error);
 
-                var project = result.Value?.project;
+                var project = result.value?.project;
                 if (project == null ||
                     string.IsNullOrWhiteSpace(project.id) ||
                     string.IsNullOrWhiteSpace(project.publicKey))
@@ -202,18 +202,18 @@ namespace PurrNet.Services.Editor
             _logo = Resources.Load<Texture2D>("purricon");
             _profile = new PurrUserProfile(Repaint);
             _profile.Refresh();
-            PurrPackageManagerAuth.onAuthChanged += OnAuthChanged;
+            PurrAuth.onAuthChanged += OnAuthChanged;
 
             ReloadConfiguration();
             SelectCurrentApp();
 
-            if (PurrPackageManagerAuth.HasApiKey())
+            if (PurrAuth.HasApiKey())
                 RefreshProjects();
         }
 
         void OnDisable()
         {
-            PurrPackageManagerAuth.onAuthChanged -= OnAuthChanged;
+            PurrAuth.onAuthChanged -= OnAuthChanged;
         }
 
         void OnAuthChanged()
@@ -223,7 +223,7 @@ namespace PurrNet.Services.Editor
             _profile.Refresh();
             _projects = null;
             _error = null;
-            if (PurrPackageManagerAuth.HasApiKey())
+            if (PurrAuth.HasApiKey())
                 RefreshProjects();
             Repaint();
         }
@@ -236,15 +236,15 @@ namespace PurrNet.Services.Editor
 
             try
             {
-                var result = await PurrServicesAPI.GetProjects(PurrPackageManagerAuth.GetApiKey());
-                if (result.Success)
+                var result = await PurrServicesAPI.GetProjects(PurrAuth.GetApiKey());
+                if (result.success)
                 {
-                    _projects = result.Value.projects;
+                    _projects = result.value.projects;
                     SelectAvailableProject();
                 }
                 else
                 {
-                    _error = result.Error;
+                    _error = result.error;
                     _projects = null;
                 }
             }
@@ -268,9 +268,9 @@ namespace PurrNet.Services.Editor
             try
             {
                 var result = await PurrServicesAPI.CreateProject(
-                    PurrPackageManagerAuth.GetApiKey(),
+                    PurrAuth.GetApiKey(),
                     projectName.Trim());
-                if (result.Success)
+                if (result.success)
                 {
                     _newProjectName = "";
                     _showCreateField = false;
@@ -279,7 +279,7 @@ namespace PurrNet.Services.Editor
                     {
                         for (int i = 0; i < _projects.Length; i++)
                         {
-                            if (_projects[i].id == result.Value.project.id)
+                            if (_projects[i].id == result.value.project.id)
                             {
                                 SelectProject(i);
                                 break;
@@ -288,7 +288,7 @@ namespace PurrNet.Services.Editor
                     }
                 }
                 else
-                    _error = result.Error;
+                    _error = result.error;
             }
             catch (Exception e)
             {
@@ -303,9 +303,9 @@ namespace PurrNet.Services.Editor
 
         async System.Threading.Tasks.Task RefreshProjectsAsync()
         {
-            var result = await PurrServicesAPI.GetProjects(PurrPackageManagerAuth.GetApiKey());
-            if (result.Success)
-                _projects = result.Value.projects;
+            var result = await PurrServicesAPI.GetProjects(PurrAuth.GetApiKey());
+            if (result.success)
+                _projects = result.value.projects;
         }
 
         void SelectProject(int index)
@@ -396,7 +396,7 @@ namespace PurrNet.Services.Editor
              string.Equals(projectId, EffectiveEditorProjectId, StringComparison.Ordinal));
 
         bool IsExternalProject(string projectId) =>
-            PurrPackageManagerAuth.HasApiKey() &&
+            PurrAuth.HasApiKey() &&
             _projects != null &&
             !string.IsNullOrEmpty(projectId) &&
             FindProject(projectId) == null;
@@ -577,13 +577,13 @@ namespace PurrNet.Services.Editor
             DrawSeparator();
             GUILayout.Space(4);
 
-            if (!PurrPackageManagerAuth.HasApiKey())
+            if (!PurrAuth.HasApiKey())
             {
                 EditorGUILayout.LabelField(
                     "Sign in to use a project.",
                     _smallLabelStyle);
                 if (GUILayout.Button("Login", GUILayout.Height(24)))
-                    PurrPackageManagerAuth.Login();
+                    PurrAuth.Login();
             }
             else
             {
@@ -610,7 +610,7 @@ namespace PurrNet.Services.Editor
         }
 
         string AppsHeaderActionLabel =>
-            !PurrPackageManagerAuth.HasApiKey()
+            !PurrAuth.HasApiKey()
                 ? "Login"
                 : _showCreateField
                     ? "Cancel"
@@ -618,9 +618,9 @@ namespace PurrNet.Services.Editor
 
         void HandleAppsHeaderAction()
         {
-            if (!PurrPackageManagerAuth.HasApiKey())
+            if (!PurrAuth.HasApiKey())
             {
-                PurrPackageManagerAuth.Login();
+                PurrAuth.Login();
                 return;
             }
 
@@ -693,14 +693,14 @@ namespace PurrNet.Services.Editor
                 MessageType.Warning);
             EditorGUILayout.Space(6);
 
-            if (!PurrPackageManagerAuth.HasApiKey())
+            if (!PurrAuth.HasApiKey())
             {
                 if (GUILayout.Button(
                         "Login",
                         GUILayout.Height(28),
                         GUILayout.Width(130)))
                 {
-                    PurrPackageManagerAuth.Login();
+                    PurrAuth.Login();
                 }
 
                 return;
@@ -1155,7 +1155,7 @@ namespace PurrNet.Services.Editor
                 _smallLabelStyle);
 
             var refreshRect = new Rect(headerRect.xMax - 78, headerRect.y + 10, 68, 22);
-            GUI.enabled = !_isBusy && PurrPackageManagerAuth.HasApiKey();
+            GUI.enabled = !_isBusy && PurrAuth.HasApiKey();
             if (GUI.Button(refreshRect, "Refresh"))
                 RefreshProjects();
             GUI.enabled = true;

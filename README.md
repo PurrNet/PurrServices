@@ -31,11 +31,21 @@ https://github.com/PurrNet/PurrServices.git?path=Assets/Tool#release
 https://github.com/PurrNet/PurrServices.git?path=Assets/Tool#dev
 ```
 
+### Requirements
+
+PurrServices builds on PurrNet Essentials, which is included in PurrNet `1.26.0-beta.30` and newer. In a project without PurrNet, add Essentials on its own:
+
+```
+https://github.com/PurrNet/PurrNet.git?path=/Assets/PurrNet/Essentials#dev
+```
+
+Do not add Essentials to a project that already has PurrNet.
+
 ## Quick Start
 
 1. Open **Tools > PurrNet > PurrServices**. PurrServices initializes automatically at runtime, so no scene component is required. Sign in and create or link a project (**Create & Link**): every service request carries that project's key, and the server rejects requests without one.
 
-   The selected project key and service URL are stored through PurrNet's `ApplicationConstants` and compiled into player builds.
+   The selected project key and service URL are stored through PurrNet Essentials' `ApplicationConstants` and compiled into player builds.
 
    Player builds and the Unity Editor have separate profiles. Each app remembers its own environment scope within each profile, defaulting to `production` for builds and `editor` in the Unity Editor. The Editor can instead use the build profile or a different linked project.
 

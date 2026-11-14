@@ -3,9 +3,8 @@
     "rootNamespace": "PurrServices.Editor",
     "references": [
         "PurrServices.Runtime",
-        "PurrNet.Editor",
-        "PurrNet.Runtime",
-        "ToolbarExtender.Editor"
+        "GUID:5a0ba52ecc0962c45a5f7f93997506a5",
+        "GUID:a0a384ce9150428b833985b4e1216af9"
     ],
     "includePlatforms": [
         "Editor"

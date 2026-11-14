@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using PurrNet.Editor;
+using PurrNet.Essentials;
 using UnityEngine.Networking;
 
 namespace PurrNet.Services.Editor
@@ -170,8 +170,8 @@ namespace PurrNet.Services.Editor
             try
             {
                 var err = JsonConvert.DeserializeObject<ApiError>(request.downloadHandler.text);
-                if (err != null && !string.IsNullOrEmpty(err.Error))
-                    return err.Error;
+                if (err != null && !string.IsNullOrEmpty(err.error))
+                    return err.error;
             }
             catch
             {

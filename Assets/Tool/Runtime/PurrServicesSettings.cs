@@ -1,4 +1,4 @@
-using PurrNet.Utils;
+using PurrNet.Essentials;
 using UnityEngine;
 
 namespace PurrNet.Services

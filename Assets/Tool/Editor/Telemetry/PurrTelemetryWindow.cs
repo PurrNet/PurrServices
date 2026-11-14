@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using PurrNet.Editor;
+using PurrNet.Essentials;
 using PurrNet.Services.Telemetry;
 using UnityEditor;
 using UnityEngine;
@@ -40,12 +40,12 @@ namespace PurrNet.Services.Editor.Telemetry
             _logo = Resources.Load<Texture2D>("purricon");
             _profile = new PurrUserProfile(Repaint);
             _profile.Refresh();
-            PurrPackageManagerAuth.onAuthChanged += OnAuthChanged;
+            PurrAuth.onAuthChanged += OnAuthChanged;
         }
 
         void OnDisable()
         {
-            PurrPackageManagerAuth.onAuthChanged -= OnAuthChanged;
+            PurrAuth.onAuthChanged -= OnAuthChanged;
         }
 
         void OnAuthChanged()

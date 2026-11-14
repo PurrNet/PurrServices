@@ -45,7 +45,13 @@ namespace PurrNet.Services.Telemetry
         {
             try
             {
-                if (!PurrTelemetrySettings.isLinked) return;
+                if (!PurrTelemetrySettings.isLinked)
+                {
+                    Debug.Log("[PurrTelemetry] Not linked (no build api key / project id in ApplicationConstants) - telemetry disabled.");
+                    return;
+                }
+
+                Debug.Log($"[PurrTelemetry] Linked to '{PurrTelemetrySettings.projectName}' ({PurrTelemetrySettings.projectId}) via {PurrTelemetrySettings.baseUrl}");
 
                 EnsureRunner();
                 TryReplayPersisted();
@@ -245,8 +251,7 @@ namespace PurrNet.Services.Telemetry
                     continue;
                 }
 
-                if (Application.isEditor)
-                    Debug.LogWarning($"[PurrTelemetry] Giving up after {PurrTelemetrySettings.MaxRetries} attempts (status {status}).");
+                Debug.Log($"[PurrTelemetry] Giving up on a batch of {batch.Length} after {PurrTelemetrySettings.MaxRetries} attempts (status {status}, {req.error}).");
                 return;
             }
         }
@@ -260,9 +265,9 @@ namespace PurrNet.Services.Telemetry
 
             if (status == 401)
             {
-                if (Application.isEditor && !_unauthorizedLogged)
+                if (!_unauthorizedLogged)
                 {
-                    Debug.LogWarning("[PurrTelemetry] 401 Unauthorized. Re-link the project from Tools/PurrNet/PurrServices.");
+                    Debug.LogError("[PurrTelemetry] 401 Unauthorized. Re-link the project from Tools/PurrNet/PurrServices.");
                     _unauthorizedLogged = true;
                 }
                 return true;
@@ -270,8 +275,7 @@ namespace PurrNet.Services.Telemetry
 
             if (status == 400 || status == 403)
             {
-                if (Application.isEditor)
-                    Debug.LogWarning($"[PurrTelemetry] {status} dropping batch: {SafeBody(req)}");
+                Debug.Log($"[PurrTelemetry] {status} dropping batch: {SafeBody(req)}");
                 return true;
             }
 

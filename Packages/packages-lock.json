@@ -28,7 +28,7 @@
     },
     "com.unity.collections": {
       "version": "2.6.2",
-      "depth": 1,
+      "depth": 2,
       "source": "registry",
       "dependencies": {
         "com.unity.burst": "1.8.23",
@@ -170,7 +170,7 @@
     },
     "com.unity.test-framework.performance": {
       "version": "3.2.0",
-      "depth": 2,
+      "depth": 3,
       "source": "registry",
       "dependencies": {
         "com.unity.test-framework": "1.1.33",
@@ -209,16 +209,15 @@
       },
       "url": "https://packages.unity.com"
     },
-    "dev.purrnet.purrnet": {
-      "version": "https://github.com/PurrNet/PurrNet.git?path=/Assets/PurrNet#v1.20.0-beta.100",
+    "dev.purrnet.essentials": {
+      "version": "https://github.com/PurrNet/PurrNet.git?path=/Assets/PurrNet/Essentials#v1.26.0-beta.31",
       "depth": 0,
       "source": "git",
       "dependencies": {
         "com.unity.nuget.mono-cecil": "1.11.4",
-        "com.unity.nuget.newtonsoft-json": "3.2.1",
-        "com.unity.collections": "2.6.2"
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
       },
-      "hash": "40eb56147053f50c7d2eeeefce527a900dc2d1cb"
+      "hash": "9658d18a0801e2702792f19328de6f7582797754"
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
