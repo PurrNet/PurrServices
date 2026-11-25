@@ -1,0 +1,62 @@
+{
+    "name": "PurrServices.Recording",
+    "rootNamespace": "PurrNet.Recording",
+    "references": [
+        "PurrNet.Runtime",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "!PURRNET_RECORDING_LEGACY"
+    ],
+    "versionDefines": [
+        {
+            "name": "dev.purrnet.purrnet",
+            "expression": "[0.0.0,1.26.0-beta.43)",
+            "define": "PURRNET_RECORDING_LEGACY"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "PURRNET_INPUT_SYSTEM"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "",
+            "define": "PURRNET_UGUI"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "PURRNET_TMP"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "PURRNET_TMP"
+        },
+        {
+            "name": "com.unity.modules.uielements",
+            "expression": "",
+            "define": "PURRNET_UITK"
+        },
+        {
+            "name": "com.unity.modules.imgui",
+            "expression": "",
+            "define": "PURRNET_IMGUI"
+        },
+        {
+            "name": "com.unity.modules.physics",
+            "expression": "",
+            "define": "UNITY_PHYSICS_3D"
+        }
+    ],
+    "noEngineReferences": false
+}
