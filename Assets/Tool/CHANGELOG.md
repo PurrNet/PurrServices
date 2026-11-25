@@ -1,3 +1,10 @@
+# [1.3.0-beta.6](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.5...v1.3.0-beta.6) (2026-11-25)
+
+
+### Bug Fixes
+
+* migrate purrnet match service ([a28e3c8](https://github.com/PurrNet/PurrServices/commit/a28e3c863c4423a54d72d2355e1f20378712da77))
+
 # [1.3.0-beta.5](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.4...v1.3.0-beta.5) (2026-11-11)
 
 
