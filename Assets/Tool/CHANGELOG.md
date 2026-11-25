@@ -1,3 +1,10 @@
+# [1.3.0-beta.5](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.4...v1.3.0-beta.5) (2026-11-11)
+
+
+### Features
+
+* matchmaking queue aliases for redirected queue IDs ([0095a6c](https://github.com/PurrNet/PurrServices/commit/0095a6c4ec8b7b72e32fe5f04257dad8dc5a69de))
+
 # [1.3.0-beta.4](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.3...v1.3.0-beta.4) (2026-11-11)
 
 
