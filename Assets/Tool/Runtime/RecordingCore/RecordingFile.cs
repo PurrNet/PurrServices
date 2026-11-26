@@ -35,7 +35,263 @@ namespace PurrNet.Recording
         Renderers = 17,
         Effects = 18,
         Terrain = 19,
-        TerrainMaterials = 20
+        TerrainMaterials = 20,
+        /// <summary>
+        /// A terrain like <see cref="Terrain"/>, its heights as the 16-bit samples Unity keeps them in: after the size,
+        /// a tolerance (varint, in steps: 0 is exact), then each sample minus its prediction from the samples left
+        /// of, above and above-left of it, wrapped to 16 bits and zigzagged (small differences either way become small
+        /// numbers), as a plane of low bytes and then a plane of high bytes (see <see cref="TerrainHeights"/>).
+        /// </summary>
+        TerrainHeights = 21,
+        /// <summary>
+        /// A mesh like <see cref="Mesh"/>, packed (see <see cref="MeshPacking"/>): each vertex axis as a 16-bit step
+        /// of the mesh's bounds (an error of at most 1/131070 of the mesh's size), the indices as deltas.
+        /// </summary>
+        MeshPacked = 22
+    }
+
+    /// <summary>
+    /// Packs a MESH payload (id, name, vertex count, float vertices, index count, uint indices) as MESH_PACKED: the
+    /// id and name as they are; the vertex count; the bounds' minimum and extent (3 + 3 floats); for x, y then z, each
+    /// vertex as round((v - min) / extent * 65535), zigzag delta from the previous vertex's (16 bits), a plane of low
+    /// bytes then one of high bytes; the index count; each index as the zigzag delta from the previous (32 bits), in
+    /// four byte planes. Deltas in planes are what makes the difference: a mesh's floats barely compress.
+    /// </summary>
+    static class MeshPacking
+    {
+        /// <summary>More than the packed form of a payload of <paramref name="length"/> bytes can take.</summary>
+        public static int MaxBytes(int length) => length + 32;
+
+        /// <summary>Like the pointer overload, from and to arrays.</summary>
+        public static unsafe int Pack(byte[] payload, int length, byte[] output)
+        {
+            if (length > payload.Length || output.Length < MaxBytes(length))
+                throw new ArgumentOutOfRangeException(nameof(output));
+            fixed (byte* source = payload)
+            fixed (byte* target = output)
+                return Pack(source, length, target);
+        }
+
+        static unsafe bool ReadVarUInt(byte* data, int length, ref int at, out uint value)
+        {
+            value = 0;
+            for (int shift = 0; shift < 35; shift += 7)
+            {
+                if (at >= length)
+                    return false;
+                byte b = data[at++];
+                value |= (uint)(b & 0x7F) << shift;
+                if (b < 0x80)
+                    return true;
+            }
+            return false;
+        }
+
+        static unsafe int WriteVarUInt(byte* output, int at, uint value)
+        {
+            while (value >= 0x80)
+            {
+                output[at++] = (byte)(value | 0x80);
+                value >>= 7;
+            }
+            output[at++] = (byte)value;
+            return at;
+        }
+
+        /// <summary>
+        /// Writes the packed form to <paramref name="output"/> (room for <see cref="MaxBytes"/>) and returns its
+        /// length, or -1 when the payload is not a mesh that packs (vertices that are not finite).
+        /// </summary>
+        public static unsafe int Pack(byte* payload, int length, byte* output)
+        {
+            int at = 0;
+            if (!ReadVarUInt(payload, length, ref at, out _) || !ReadVarUInt(payload, length, ref at, out uint nameLength) ||
+                nameLength > length - at)
+                return -1;
+            at += (int)nameLength;
+            int prefix = at;
+            if (!ReadVarUInt(payload, length, ref at, out uint vertexCount) || (long)vertexCount * 12 > length - at)
+                return -1;
+            float* vertices = (float*)(payload + at);
+            at += (int)vertexCount * 12;
+            if (!ReadVarUInt(payload, length, ref at, out uint indexCount) || (long)indexCount * 4 != length - at)
+                return -1;
+            byte* indices = payload + at;
+            int n = (int)vertexCount, m = (int)indexCount;
+
+            float* min = stackalloc float[3];
+            float* extent = stackalloc float[3];
+            for (int a = 0; a < 3; a++)
+            {
+                float lo = float.PositiveInfinity, hi = float.NegativeInfinity;
+                for (int v = 0; v < n; v++)
+                {
+                    float x = vertices[v * 3 + a];
+                    if (float.IsNaN(x) || float.IsInfinity(x))
+                        return -1;
+                    if (x < lo) lo = x;
+                    if (x > hi) hi = x;
+                }
+                if (n == 0)
+                    lo = hi = 0f;
+                min[a] = lo;
+                extent[a] = hi - lo;
+                if (float.IsInfinity(extent[a]))
+                    return -1;
+            }
+
+            Buffer.MemoryCopy(payload, output, prefix, prefix);
+            int o = WriteVarUInt(output, prefix, vertexCount);
+            Buffer.MemoryCopy(min, output + o, 12, 12);
+            o += 12;
+            Buffer.MemoryCopy(extent, output + o, 12, 12);
+            o += 12;
+            for (int a = 0; a < 3; a++)
+            {
+                byte* low = output + o, high = output + o + n;
+                double lo = min[a], e = extent[a];
+                int previous = 0;
+                for (int v = 0; v < n; v++)
+                {
+                    int q = e > 0 ? (int)Math.Round((vertices[v * 3 + a] - lo) / e * 65535.0) : 0;
+                    q = q < 0 ? 0 : q > 65535 ? 65535 : q;
+                    short delta = (short)(q - previous);
+                    ushort z = (ushort)((delta << 1) ^ (delta >> 15));
+                    low[v] = (byte)z;
+                    high[v] = (byte)(z >> 8);
+                    previous = q;
+                }
+                o += 2 * n;
+            }
+            o = WriteVarUInt(output, o, indexCount);
+            int last = 0;
+            for (int i = 0; i < m; i++)
+            {
+                int index = indices[i * 4] | indices[i * 4 + 1] << 8 | indices[i * 4 + 2] << 16 | indices[i * 4 + 3] << 24;
+                int delta = unchecked(index - last);
+                uint z = (uint)((delta << 1) ^ (delta >> 31));
+                for (int b = 0; b < 4; b++)
+                    output[o + b * m + i] = (byte)(z >> (8 * b));
+                last = index;
+            }
+            return o + 4 * m;
+        }
+    }
+
+    /// <summary>
+    /// Packs a terrain's normalized heights as 16-bit samples for <see cref="RecordKind.TerrainHeights"/>. Unity
+    /// stores a heightmap as 16-bit values and hands them out as <c>sample * (1f / 32766f)</c>, so every height a
+    /// terrain gives back packs exactly; one that does not (written some other way) keeps the float record.
+    /// </summary>
+    static class TerrainHeights
+    {
+        const float Step = 1f / 32766f;
+
+        /// <summary>The most bytes the packed heights of <paramref name="slices"/> take (the tolerance, then two planes).</summary>
+        public static int PackedBytes(List<float[,]> slices)
+        {
+            int samples = 0;
+            foreach (var slice in slices)
+                samples += slice.Length;
+            return 5 + samples * 2;
+        }
+
+        /// <summary>Like the pointer overload, into <paramref name="output"/> from <paramref name="offset"/>.</summary>
+        public static unsafe int TryPack(List<float[,]> slices, byte[] output, int offset, int tolerance = 0)
+        {
+            if (offset < 0 || output.Length - offset < PackedBytes(slices))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            fixed (byte* start = output)
+                return TryPack(slices, start + offset, tolerance);
+        }
+
+        /// <summary>
+        /// Writes the tolerance (a varint: how many 16-bit steps a height may be off, 0 for exact) and the two planes
+        /// to <paramref name="output"/> (room for <see cref="PackedBytes"/>), and returns how many bytes that took, or
+        /// -1 if a height is not one Unity could have given back. With a tolerance, each residual is rounded to a
+        /// multiple of 2 * tolerance + 1 steps and the predictions use the heights as they will be read back (kept
+        /// within 0..65535), so no height is ever off by more than the tolerance. Terrain is smooth: its residuals
+        /// are mostly 0 or 1 step, the noise of rounding a smooth surface, which a tolerance takes out.
+        /// </summary>
+        public static unsafe int TryPack(List<float[,]> slices, byte* output, int tolerance = 0)
+        {
+            if (slices.Count == 0 || tolerance < 0)
+                return -1;
+            int side = slices[0].GetLength(1);
+            int count = 0;
+            foreach (var slice in slices)
+            {
+                if (slice.GetLength(1) != side)
+                    return -1;
+                count += slice.GetLength(0);
+            }
+            if (side < 2 || count != side)
+                return -1;
+
+            int samples = side * side;
+            int o = 0;
+            for (uint t = (uint)tolerance; ; t >>= 7)
+            {
+                if (t < 0x80)
+                {
+                    output[o++] = (byte)t;
+                    break;
+                }
+                output[o++] = (byte)(t | 0x80);
+            }
+            int step = 2 * tolerance + 1;
+            byte* low = output + o, high = output + o + samples;
+            var previous = new int[side];
+            var current = new int[side];
+            int z = 0;
+            foreach (var slice in slices)
+            {
+                int rows = slice.GetLength(0);
+                if (rows == 0)
+                    continue;
+                fixed (float* start = &slice[0, 0])
+                {
+                    for (int r = 0; r < rows; r++, z++)
+                    {
+                        float* row = start + r * side;
+                        int at = z * side;
+                        for (int x = 0; x < side; x++)
+                        {
+                            float height = row[x];
+                            double scaled = height * 32766.0;
+                            if (!(scaled >= 0 && scaled <= 65535))
+                                return -1;
+                            int sample = (int)Math.Round(scaled);
+                            // The cast rounds to a float: the runtime may hold float arithmetic in double precision,
+                            // and the product must be compared exactly as Unity stores it.
+                            float back = (float)((float)sample * Step);
+                            if (back != height)
+                                return -1;
+                            int predicted = z == 0
+                                ? (x == 0 ? 0 : current[x - 1])
+                                : x == 0 ? previous[0] : current[x - 1] + previous[x] - previous[x - 1];
+                            int difference = sample - predicted;
+                            if (tolerance > 0)
+                            {
+                                // Rounded to a multiple of the step; the height read back is what predicts the next.
+                                int q = difference >= 0 ? (difference + tolerance) / step : -((tolerance - difference) / step);
+                                int read = predicted + q * step;
+                                current[x] = read < 0 ? 0 : read > 65535 ? 65535 : read;
+                                difference = q;
+                            }
+                            else
+                                current[x] = sample;
+                            short residual = unchecked((short)difference);
+                            ushort zigzag = (ushort)((residual << 1) ^ (residual >> 15));
+                            low[at + x] = (byte)zigzag;
+                            high[at + x] = (byte)(zigzag >> 8);
+                        }
+                        (previous, current) = (current, previous);
+                    }
+                }
+            }
+            return o + 2 * samples;
+        }
     }
 
     interface IStepwiseRecordProducer : IRecordProducer
@@ -65,6 +321,7 @@ namespace PurrNet.Recording
 #if !PURRREC_WEB
             public List<float[,]> terrainHeights;
             public byte[] terrainHoles;
+            public int terrainTolerance;
 #endif
         }
 
@@ -355,7 +612,11 @@ namespace PurrNet.Recording
 #endif
         }
 
-        internal void EnqueueTerrain(RecordingBuffer prefix, List<float[,]> heights, byte[] holes)
+        /// <summary>
+        /// A terrain: <paramref name="tolerance"/> is how many 16-bit steps its heights may be off when they are packed
+        /// (see <see cref="TerrainHeights"/>), 0 for exact.
+        /// </summary>
+        internal void EnqueueTerrain(RecordingBuffer prefix, List<float[,]> heights, byte[] holes, int tolerance = 0)
         {
             if (_error != null)
                 return;
@@ -365,6 +626,19 @@ namespace PurrNet.Recording
             int holeBytes = holes?.Length ?? 0;
             int length = prefix.length + heightBytes + holeBytes;
 #if PURRREC_WEB
+            var packed = new byte[prefix.length + TerrainHeights.PackedBytes(heights) + holeBytes];
+            int packedBytes = TerrainHeights.TryPack(heights, packed, prefix.length, tolerance);
+            if (packedBytes >= 0)
+            {
+                Buffer.BlockCopy(prefix.data, 0, packed, 0, prefix.length);
+                if (holeBytes != 0)
+                    Buffer.BlockCopy(holes, 0, packed, prefix.length + packedBytes, holeBytes);
+                int total = prefix.length + packedBytes + holeBytes;
+                if (total != packed.Length)
+                    Array.Resize(ref packed, total);
+                Enqueue(RecordKind.TerrainHeights, packed, true);
+                return;
+            }
             var bytes = new byte[length];
             Buffer.BlockCopy(prefix.data, 0, bytes, 0, prefix.length);
             int at = prefix.length;
@@ -383,7 +657,7 @@ namespace PurrNet.Recording
             var record = new PendingRecord
             {
                 kind = RecordKind.Terrain, payload = prefix.ToArray(), compress = true,
-                terrainHeights = heights, terrainHoles = holes, nativeLength = heightBytes
+                terrainHeights = heights, terrainHoles = holes, nativeLength = heightBytes, terrainTolerance = tolerance
             };
             Interlocked.Add(ref _pendingTerrainBytes, heightBytes);
             Add(record);
@@ -402,7 +676,7 @@ namespace PurrNet.Recording
                 using var _ = CompressMarker.Auto();
                 // Terrain grids can compress to a tiny fraction of their input, especially flat tiles.
                 int reserve = length / 2 + 1024;
-                bool terrain = recordKind == RecordKind.Terrain;
+                bool terrain = recordKind == RecordKind.Terrain || recordKind == RecordKind.TerrainHeights;
                 if (terrain)
                     reserve = Math.Min(reserve, 64 * 1024);
                 _nativeSink.Begin(reserve);
@@ -444,6 +718,56 @@ namespace PurrNet.Recording
             WriteTerrainRows(_stream, heights);
             WriteSlices(_stream, holes);
             Interlocked.Add(ref _bytesWritten, header.length + length);
+        }
+
+        /// <summary>
+        /// The heights as 16-bit samples (<see cref="RecordKind.TerrainHeights"/>) when they pack exactly, packed into
+        /// native memory next to the prefix; otherwise as floats, read straight from the snapshot.
+        /// </summary>
+        unsafe void WriteTerrain(in PendingRecord record, RecordingBuffer header)
+        {
+            int prefixLength = record.payload.Length;
+            long packedLength = prefixLength + (long)TerrainHeights.PackedBytes(record.terrainHeights);
+            if (packedLength <= int.MaxValue)
+            {
+                var packed = (byte*)Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Malloc(packedLength, 1,
+                    Unity.Collections.Allocator.Persistent);
+                try
+                {
+                    record.payload.AsSpan().CopyTo(new Span<byte>(packed, prefixLength));
+                    int written = TerrainHeights.TryPack(record.terrainHeights, packed + prefixLength, record.terrainTolerance);
+                    if (written >= 0)
+                    {
+                        WriteNative(RecordKind.TerrainHeights, new ReadOnlySpan<byte>(packed, prefixLength + written), true, header,
+                            holes: record.terrainHoles);
+                        return;
+                    }
+                }
+                finally
+                {
+                    Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Free(packed, Unity.Collections.Allocator.Persistent);
+                }
+            }
+            WriteNative(record.kind, record.payload, true, header, record.terrainHeights, record.nativeLength, record.terrainHoles);
+        }
+
+        /// <summary>A mesh packed in native memory (see <see cref="MeshPacking"/>), or false to write it as it is.</summary>
+        unsafe bool WritePackedMesh(byte* payload, int length, bool compress, RecordingBuffer header)
+        {
+            var packed = (byte*)Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Malloc(MeshPacking.MaxBytes(length), 1,
+                Unity.Collections.Allocator.Persistent);
+            try
+            {
+                int packedLength = MeshPacking.Pack(payload, length, packed);
+                if (packedLength < 0)
+                    return false;
+                WriteNative(RecordKind.MeshPacked, new ReadOnlySpan<byte>(packed, packedLength), compress, header);
+                return true;
+            }
+            finally
+            {
+                Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Free(packed, Unity.Collections.Allocator.Persistent);
+            }
         }
 
         unsafe void WriteTerrainRows(Stream stream, List<float[,]> heights)
@@ -494,12 +818,14 @@ namespace PurrNet.Recording
 #if !PURRREC_WEB
                 if (record.native != IntPtr.Zero)
                 {
+                    if (record.kind == RecordKind.Mesh && WritePackedMesh((byte*)record.native, record.nativeLength, record.compress, header))
+                        return;
                     WriteNative(record.kind, new ReadOnlySpan<byte>((void*)record.native, record.nativeLength), record.compress, header);
                     return;
                 }
                 if (record.terrainHeights != null)
                 {
-                    WriteNative(record.kind, record.payload, true, header, record.terrainHeights, record.nativeLength, record.terrainHoles);
+                    WriteTerrain(record, header);
                     return;
                 }
 #endif

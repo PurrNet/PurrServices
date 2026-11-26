@@ -67,6 +67,21 @@ namespace PurrNet.Recording
 
             public Rect rootRect;
             public float screenX, screenY, screenWidth = 1, screenHeight = 1;
+
+            /// <summary>Where the element was when it was last captured, from its root: what a capture starts from.</summary>
+            public float absX, absY;
+
+            /// <summary>The parent the last written row is relative to, when it is.</summary>
+            public Element shownParent;
+
+            /// <summary>
+            /// What a graphic that draws a whole UI by itself showed (see <see cref="UIContentSources"/>): an element
+            /// for each item, by the item's id. Those elements are not in the list the passes walk; the graphic's
+            /// capture keeps them.
+            /// </summary>
+            public Dictionary<ulong, Element> contents;
+            public int contentsVersion = -1;
+            public int contentsSeen;
         }
 
         static readonly ProfilerMarker Marker = new ProfilerMarker("RecordLocalUI.Pass");
@@ -224,9 +239,21 @@ namespace PurrNet.Recording
             if (snapshot && !starting)
             {
                 for (int i = 0; i < _elements.Count; i++)
-                    if (_elements[i].live)
-                        Write(ref _elements[i].last);
+                {
+                    if (!_elements[i].live)
+                        continue;
+                    Write(ref _elements[i].last);
+                    var contents = _elements[i].contents;
+                    if (contents != null)
+                        foreach (var item in contents.Values)
+                            if (item.live)
+                                Write(ref item.last);
+                }
             }
+#if PURRNET_UGUI
+            if (starting)
+                UIContentSources.Use(true);
+#endif
 
             if (_exclusions != DontRecordUI.version)
             {
@@ -349,6 +376,11 @@ namespace PurrNet.Recording
         void Capture(Element element)
         {
             element.pass = _pass;
+            // The parent first: an element's row is relative to where its parent is shown, and a parent that moves
+            // this pass moves it too. Without this, a child read before its parent would be written twice.
+            var parent = element.parent;
+            if (parent != null && parent.pass != _pass && !parent.dropped)
+                Capture(parent);
 #if PURRNET_UITK
             if (element.toolkit)
             {
@@ -373,15 +405,80 @@ namespace PurrNet.Recording
             sample.id = element.id;
             sample.parent = element.parent != null ? element.parent.id : 0;
             sample.root = element.root != null ? element.root.id : element.id;
+            element.absX = sample.x;
+            element.absY = sample.y;
+            var parent = element.parent;
+            bool relative = parent != null && parent.live && parent.toolkit == element.toolkit;
+            if (relative)
+            {
+                sample.x -= ShownX(parent);
+                sample.y -= ShownY(parent);
+                sample.flags |= UIFlags.ParentRelative;
+            }
+            Round(ref sample);
             if (element.live && Same(ref element.last, ref sample))
                 return;
             element.last = sample;
+            element.shownParent = relative ? parent : null;
             element.live = true;
             Write(ref sample);
         }
 
+        /// <summary>
+        /// Geometry rounded to power-of-two grids finer than what counts as a change (a quarter of a pixel): rects to
+        /// 1/8192 of the screen, rotation to 1/64 of a degree, world-space canvases to 1/1024 of a unit and 1/16384
+        /// per quaternion component. Raw floats carry noise in their last bits that no compressor can take out;
+        /// rounded, the UI takes less than half the room. Every value stays exact in a float, so sums of rounded
+        /// values (an element placed from its parent) stay on the grid.
+        /// </summary>
+        static void Round(ref UISample s)
+        {
+            s.x = Round(s.x, RectGrid);
+            s.y = Round(s.y, RectGrid);
+            s.width = Round(s.width, RectGrid);
+            s.height = Round(s.height, RectGrid);
+            s.fontSize = Round(s.fontSize, RectGrid);
+            s.fillAmount = Round(s.fillAmount, RectGrid);
+            s.rotation = Round(s.rotation, 64f);
+            s.worldPosition = new Vector3(Round(s.worldPosition.x, 1024f), Round(s.worldPosition.y, 1024f), Round(s.worldPosition.z, 1024f));
+            s.worldRotation = new Quaternion(Round(s.worldRotation.x, 16384f), Round(s.worldRotation.y, 16384f),
+                Round(s.worldRotation.z, 16384f), Round(s.worldRotation.w, 16384f));
+            s.worldSize = new Vector2(Round(s.worldSize.x, 1024f), Round(s.worldSize.y, 1024f));
+        }
+
+        const float RectGrid = 8192f;
+
+        static float Round(float value, float grid) =>
+            System.Math.Abs(value) < 16777216f / grid ? (float)((float)System.Math.Round(value * (double)grid) / grid) + 0f : value;
+
+        /// <summary>Where the viewer shows the element: its last row, plus where its parent is shown if it is relative.</summary>
+        static float ShownX(Element element)
+        {
+            float x = 0f;
+            for (int depth = 0; element != null && depth < 256; depth++)
+            {
+                x += element.last.x;
+                element = (element.last.flags & UIFlags.ParentRelative) != 0 ? element.shownParent : null;
+            }
+            return x;
+        }
+
+        static float ShownY(Element element)
+        {
+            float y = 0f;
+            for (int depth = 0; element != null && depth < 256; depth++)
+            {
+                y += element.last.y;
+                element = (element.last.flags & UIFlags.ParentRelative) != 0 ? element.shownParent : null;
+            }
+            return y;
+        }
+
         void Hide(Element element)
         {
+#if PURRNET_UGUI
+            HideContents(element);
+#endif
             if (!element.live)
                 return;
             element.live = false;
@@ -406,6 +503,10 @@ namespace PurrNet.Recording
 
         void Forget()
         {
+#if PURRNET_UGUI
+            if (_epoch != 0)
+                UIContentSources.Use(false);
+#endif
             _epoch = 0;
             _screenWidth = _screenHeight = 0;
             _sampledTick = ulong.MaxValue;
@@ -413,6 +514,12 @@ namespace PurrNet.Recording
             {
                 _elements[i].live = false;
                 _elements[i].content = true;
+                var contents = _elements[i].contents;
+                if (contents == null)
+                    continue;
+                _elements[i].contentsVersion = -1;
+                foreach (var item in contents.Values)
+                    item.live = false;
             }
         }
 
@@ -457,10 +564,14 @@ namespace PurrNet.Recording
         {
             float nearX = RectTolerancePixels / Mathf.Max(1, _screenWidth), nearY = RectTolerancePixels / Mathf.Max(1, _screenHeight);
             float nearFill = RectTolerancePixels / Mathf.Max(1f, Mathf.Max(b.width * _screenWidth, b.height * _screenHeight));
+            // A turn that moves the element's corners by less than the rect tolerance is no change either (and
+            // never less than 0.01 degree): small icons that wobble write far fewer rows.
+            float halfPixels = 0.5f * Mathf.Max(1f, Mathf.Max(b.width * _screenWidth, b.height * _screenHeight));
+            float nearAngle = Mathf.Max(0.01f, RectTolerancePixels / halfPixels * Mathf.Rad2Deg);
             return a.kind == b.kind && a.widget == b.widget && a.flags == b.flags && a.parent == b.parent &&
                    a.root == b.root && a.order == b.order &&
                    Near(a.x, b.x, nearX) && Near(a.y, b.y, nearY) && Near(a.width, b.width, nearX) && Near(a.height, b.height, nearY) &&
-                   Mathf.Abs(a.rotation - b.rotation) < 0.01f &&
+                   Mathf.Abs(a.rotation - b.rotation) < nearAngle &&
                    Same(a.color, b.color) && Same(a.textColor, b.textColor) && Near(a.fontSize, b.fontSize, nearY) &&
                    a.align == b.align && a.fill == b.fill && a.fillOrigin == b.fillOrigin &&
                    Near(a.fillAmount, b.fillAmount, nearFill) && a.value == b.value &&

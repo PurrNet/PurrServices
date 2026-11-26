@@ -58,6 +58,9 @@ namespace PurrNet.Recording
         public readonly List<ChunkStream> streams = new List<ChunkStream>();
         public ulong firstTick;
         public ulong tickCount;
+
+        /// <summary>Which file of the session the chunk belongs to: the encoder forgets what it held between files.</summary>
+        public int file;
         public const int TickFollows = int.MinValue;
         internal ulong lastTick;
         internal bool hasTick;
@@ -107,6 +110,30 @@ namespace PurrNet.Recording
             _coded = new RecordingBuffer(_shelf, 1024);
         }
         readonly List<int> _keep = new List<int>();
+
+        /// <summary>
+        /// The last row (as recorded, before grid and XOR) and managed values of every per-tick stream, and through
+        /// which tick of which chunk it holds. A stream whose rows in a chunk all repeat it is not written again: the
+        /// chunk ends with a list of such streams (HOLDS), and readers keep showing the row they have.
+        /// </summary>
+        sealed class Held
+        {
+            public byte[] row;
+            public byte[][] managed;
+            public ulong end;
+            public int chunk;
+        }
+
+        readonly Dictionary<int, Held> _held = new Dictionary<int, Held>();
+        readonly List<long> _holds = new List<long>();
+        readonly List<int> _stale = new List<int>();
+        bool[] _isBase = Array.Empty<bool>();
+        int[] _previousOfKey = Array.Empty<int>();
+        readonly Dictionary<int, int> _lastOfKey = new Dictionary<int, int>();
+        int _file = -1;
+        int _chunkIndex;
+        int _blocksAt;
+        int _written;
         readonly Dictionary<RowLayout, bool[]> _numericMasks = new Dictionary<RowLayout, bool[]>();
         byte[] _plane = Array.Empty<byte>();
 
@@ -153,6 +180,14 @@ namespace PurrNet.Recording
 
         public void Begin(ChunkLog log)
         {
+            if (log.file != _file)
+            {
+                _file = log.file;
+                _held.Clear();
+                _chunkIndex = 0;
+            }
+            _holds.Clear();
+            _written = 0;
             _log = log;
             _phase = Phase.Count;
             _at = 0;
@@ -164,6 +199,11 @@ namespace PurrNet.Recording
             Grow(ref _slotFill, slots);
             Grow(ref _slotManagedFirst, slots);
             Array.Clear(_slotCount, 0, slots);
+            Grow(ref _isBase, slots);
+            Array.Clear(_isBase, 0, slots);
+            for (int i = 0; i < slots; i++)
+                if (log.streams[i].baseSlot >= 0)
+                    _isBase[log.streams[i].baseSlot] = true;
         }
 
         public bool Step(long deadline)
@@ -212,11 +252,11 @@ namespace PurrNet.Recording
                         _buffer.Clear();
                         _buffer.WriteVarUInt(log.firstTick);
                         _buffer.WriteVarUInt(log.tickCount);
-                        int blocks = 0;
-                        for (int i = 0; i < streams.Count; i++)
-                            if (_slotCount[i] > 0)
-                                blocks++;
-                        _buffer.WriteVarUInt((ulong)blocks);
+                        // The count is known once the streams that only hold are left out: room for it now, filled in
+                        // at the end as a varint padded to five bytes (readers take it like any other).
+                        _blocksAt = _buffer.length;
+                        for (int i = 0; i < 5; i++)
+                            _buffer.WriteByte(0);
                         _slot = 0;
                         _phase = Phase.Streams;
                         break;
@@ -227,10 +267,12 @@ namespace PurrNet.Recording
                             int slot = _slot++;
                             if (_slotCount[slot] == 0)
                                 continue;
-                            EncodeStream(log, slot);
+                            if (EncodeStream(log, slot))
+                                _written++;
                             if (_slot < streams.Count && System.Diagnostics.Stopwatch.GetTimestamp() > deadline)
                                 return false;
                         }
+                        FinishChunk();
                         _phase = Phase.Done;
                         _log = null;
                         return true;
@@ -241,7 +283,107 @@ namespace PurrNet.Recording
             }
         }
 
-        void EncodeStream(ChunkLog log, int slot)
+        /// <summary>The block count, then the HOLDS: their count, then each stream id (from the last) and its end tick (from the chunk's first).</summary>
+        void FinishChunk()
+        {
+            var data = _buffer.data;
+            uint count = (uint)_written;
+            for (int i = 0; i < 4; i++)
+                data[_blocksAt + i] = (byte)(((count >> (7 * i)) & 0x7F) | 0x80);
+            data[_blocksAt + 4] = (byte)((count >> 28) & 0x7F);
+
+            _holds.Sort();
+            _buffer.WriteVarUInt((ulong)_holds.Count);
+            long previous = 0;
+            foreach (long hold in _holds)
+            {
+                long id = hold >> 32;
+                ulong end = (ulong)(uint)hold;
+                _buffer.WriteVarUInt((ulong)(id - previous));
+                _buffer.WriteVarUInt(end);
+                previous = id;
+            }
+
+            _chunkIndex++;
+            if ((_chunkIndex & 63) == 0)
+            {
+                // Streams that were in no chunk for a while have ended: what they held is forgotten.
+                _stale.Clear();
+                foreach (var pair in _held)
+                    if (pair.Value.chunk < _chunkIndex - 2)
+                        _stale.Add(pair.Key);
+                foreach (int id in _stale)
+                    _held.Remove(id);
+            }
+        }
+
+        /// <summary>
+        /// A per-tick stream all of whose rows in this chunk repeat the row it held through the end of the chunk
+        /// before is a HOLD, not a block. Not for streams XORed against another or that others are XORed against.
+        /// </summary>
+        unsafe bool Holds(in ChunkStream s, int slot, int n, int size, ulong firstTick, int managedBase, int managedFields,
+            byte[] logBytes)
+        {
+            if (!s.forwardFill || s.baseSlot >= 0 || _isBase[slot] || !_held.TryGetValue(s.id, out var last) ||
+                last.chunk != _chunkIndex - 1 || last.end + 1 != firstTick || last.row.Length != size)
+                return false;
+            byte[] rows = _work.data;
+            if (size > 0)
+            {
+                fixed (byte* held = last.row)
+                fixed (byte* row = rows)
+                    for (int r = 0; r < n; r++)
+                        if (UnsafeUtility.MemCmp(row + r * size, held, size) != 0)
+                            return false;
+            }
+            for (int f = 0; f < managedFields; f++)
+            {
+                var value = last.managed[f];
+                for (int r = 0; r < n; r++)
+                {
+                    int v = managedBase + _entryOf[r] * managedFields + f;
+                    if (!SameBytes(logBytes, _valueStart[v], _valueLength[v], value))
+                        return false;
+                }
+            }
+            last.chunk = _chunkIndex;
+            last.end = firstTick + (ulong)n - 1;
+            _holds.Add((long)s.id << 32 | (uint)(last.end - _log.firstTick));
+            return true;
+        }
+
+        /// <summary>The block's last row and managed values, for the next chunk to compare with.</summary>
+        void Remember(in ChunkStream s, int n, int size, ulong firstTick, int managedBase, int managedFields, byte[] logBytes)
+        {
+            if (!_held.TryGetValue(s.id, out var last) || last.row.Length != size || last.managed.Length != managedFields)
+                _held[s.id] = last = new Held { row = new byte[size], managed = new byte[managedFields][] };
+            Buffer.BlockCopy(_work.data, (n - 1) * size, last.row, 0, size);
+            for (int f = 0; f < managedFields; f++)
+            {
+                int v = managedBase + _entryOf[n - 1] * managedFields + f;
+                if (last.managed[f] == null || !SameBytes(logBytes, _valueStart[v], _valueLength[v], last.managed[f]))
+                {
+                    var copy = new byte[_valueLength[v]];
+                    Buffer.BlockCopy(logBytes, _valueStart[v], copy, 0, copy.Length);
+                    last.managed[f] = copy;
+                }
+            }
+            last.chunk = _chunkIndex;
+            last.end = firstTick + (ulong)n - 1;
+        }
+
+        static unsafe bool SameBytes(byte[] data, int start, int length, byte[] other)
+        {
+            if (other == null || other.Length != length)
+                return false;
+            if (length == 0)
+                return true;
+            fixed (byte* a = &data[start])
+            fixed (byte* b = other)
+                return UnsafeUtility.MemCmp(a, b, length) == 0;
+        }
+
+        bool EncodeStream(ChunkLog log, int slot)
         {
             var buffer = _buffer;
             var work = _work;
@@ -275,13 +417,23 @@ namespace PurrNet.Recording
                 Buffer.BlockCopy(_rows, _rowOffset[first + e], work.data, r * size, size);
             }
             work.length = n * size;
+            int managedBase = _slotManagedFirst[slot];
+            if (s.forwardFill)
+            {
+                if (Holds(s, slot, n, size, firstTick, managedBase, managedFields, logBytes))
+                    return false;
+                Remember(s, n, size, firstTick, managedBase, managedFields, logBytes);
+            }
             uint crc = s.forwardFill ? Crc32(work.data, 0, n * size) : 0;
 
+            // Columns on a grid become integers after the checksum (which is of the rows as recorded) and before
+            // the XOR against a base stream (which readers undo before turning them back into floats).
+            if (s.layout.hasGrid)
+                ToGrid(s.layout, work.data, n);
             if (s.baseSlot >= 0 && _slotCount[s.baseSlot] > 0)
-                XorWithBase(s, first, n, _slotFirst[s.baseSlot], _slotCount[s.baseSlot], work.data);
+                XorWithBase(s, log.streams[s.baseSlot].layout, first, n, _slotFirst[s.baseSlot], _slotCount[s.baseSlot], work.data);
 
             keep.Clear();
-            int managedBase = _slotManagedFirst[slot];
             for (int r = 0; r < n; r++)
             {
                 if (r == 0 || !s.forwardFill ||
@@ -310,26 +462,53 @@ namespace PurrNet.Recording
                 for (int i = 0; i < k; i++)
                     Buffer.BlockCopy(work.data, keep[i] * size, coded.data, i * size, size);
                 coded.length = total;
+                bool keyed = s.layout.keyOffset >= 0;
+                if (keyed)
+                    KeyRows(s.layout, coded.data, k);
                 CodeColumns(s.layout, coded.data, k);
 
-                if (plane.Length < total)
+                // Columns on a grid are written after the planes, each as its rows' coded values (zigzag second
+                // differences of the integers) in varints: they are small numbers, which planes of four bytes
+                // spread over mostly empty bytes. The planes hold the other bytes.
+                var gridAt = s.layout.hasGrid ? s.layout.gridAt : null;
+                int plain = gridAt != null ? s.layout.plainBytes : size;
+                int planes = k * plain;
+                if (plane.Length < planes)
                 {
                     if (plane.Length > 0)
                         _shelf.Put(plane);
-                    plane = _shelf.Take(Mathf.NextPowerOfTwo(total));
+                    plane = _shelf.Take(Mathf.NextPowerOfTwo(Math.Max(1, planes)));
                 }
-                for (int r = 0; r < k; r++)
-                    for (int b = 0; b < size; b++)
-                        plane[b * k + r] = coded.data[r * size + b];
-                buffer.WriteBytes(plane, 0, total);
+                for (int b = 0, p = 0; b < size; b++)
+                {
+                    if (gridAt != null && gridAt[b] > 0)
+                        continue;
+                    for (int r = 0; r < k; r++)
+                        plane[p * k + r] = coded.data[r * size + b];
+                    p++;
+                }
+                buffer.WriteBytes(plane, 0, planes);
+                if (gridAt != null)
+                    foreach (var c in s.layout.columns)
+                        if (c.grid > 0)
+                            for (int r = 0; r < k; r++)
+                                buffer.WriteVarUInt((uint)ReadInt(coded.data, r * size + c.offset));
             }
 
+            bool keyedValues = s.layout.keyOffset >= 0 && k > 0;
             for (int f = 0; f < managedFields; f++)
             {
                 int last = -1;
-                foreach (int r in keep)
+                for (int i = 0; i < k; i++)
                 {
+                    int r = keep[i];
                     int v = managedBase + entryOf[r] * managedFields + f;
+                    if (keyedValues)
+                    {
+                        // 0: the same as this key's previous row in the chunk.
+                        int before = _previousOfKey[i];
+                        last = before >= 0 ? managedBase + entryOf[keep[before]] * managedFields + f : -1;
+                    }
                     if (last >= 0 && SameValue(logBytes, last, v))
                     {
                         buffer.WriteVarUInt(0);
@@ -348,6 +527,7 @@ namespace PurrNet.Recording
             }
 
             _plane = plane;
+            return true;
         }
 
         void Layout(List<ChunkStream> streams)
@@ -473,9 +653,39 @@ namespace PurrNet.Recording
             return crc ^ 0xFFFFFFFFu;
         }
 
-        void XorWithBase(in ChunkStream s, int first, int n, int baseFirst, int baseCount, byte[] rows)
+        /// <summary>
+        /// A float column on a grid as the integer value * grid (rounded; it already is on the grid). What does not
+        /// fit an int, or is not a number, becomes int.MinValue, which readers show as NaN.
+        /// </summary>
+        static int GridValue(byte[] data, int at, float grid)
+        {
+            float value = BitConverter.Int32BitsToSingle(ReadInt(data, at));
+            double scaled = Math.Round((double)value * grid);
+            return Math.Abs(scaled) < 2147483647.0 ? (int)scaled : int.MinValue;
+        }
+
+        static void ToGrid(RowLayout layout, byte[] rows, int count)
+        {
+            int size = layout.rowSize;
+            foreach (var c in layout.columns)
+            {
+                if (c.grid <= 0)
+                    continue;
+                for (int r = 0, at = c.offset; r < count; r++, at += size)
+                {
+                    int value = GridValue(rows, at, c.grid);
+                    rows[at] = (byte)value;
+                    rows[at + 1] = (byte)(value >> 8);
+                    rows[at + 2] = (byte)(value >> 16);
+                    rows[at + 3] = (byte)(value >> 24);
+                }
+            }
+        }
+
+        void XorWithBase(in ChunkStream s, RowLayout baseLayout, int first, int n, int baseFirst, int baseCount, byte[] rows)
         {
             int size = s.layout.rowSize;
+            var baseGrid = baseLayout.hasGrid ? baseLayout.gridAt : null;
             int j = -1;
             for (int r = 0; r < n; r++)
             {
@@ -488,6 +698,15 @@ namespace PurrNet.Recording
                 for (int c = 0; c < s.baseColumns.Length; c += 2)
                 {
                     int own = r * size + s.baseColumns[c], other = baseRow + s.baseColumns[c + 1];
+                    float grid = baseGrid != null ? baseGrid[s.baseColumns[c + 1]] : 0f;
+                    if (grid > 0)
+                    {
+                        // Against the base as it is stored: on its grid.
+                        int value = GridValue(_rows, other, grid);
+                        for (int i = 0; i < 4; i++)
+                            rows[own + i] ^= (byte)(value >> (8 * i));
+                        continue;
+                    }
                     for (int i = 0; i < 4; i++)
                         rows[own + i] ^= _rows[other + i];
                 }
@@ -510,21 +729,54 @@ namespace PurrNet.Recording
             return true;
         }
 
+        /// <summary>
+        /// KEYED rows: from <see cref="RowLayout.keyedFrom"/> on, each row is XORed with the previous row of the same
+        /// key (read from the key column, which is left as it is); the first row of a key in the chunk stays whole.
+        /// Also notes each row's previous row of its key, for the managed values.
+        /// </summary>
+        void KeyRows(RowLayout layout, byte[] rows, int count)
+        {
+            int size = layout.rowSize, from = layout.keyedFrom, key = layout.keyOffset;
+            Grow(ref _previousOfKey, count);
+            _lastOfKey.Clear();
+            for (int r = 0; r < count; r++)
+            {
+                int id = ReadInt(rows, r * size + key);
+                _previousOfKey[r] = _lastOfKey.TryGetValue(id, out int before) ? before : -1;
+                _lastOfKey[id] = r;
+            }
+            // From the last row back, so every row is XORed with its key's previous row as it was.
+            for (int r = count - 1; r > 0; r--)
+            {
+                int before = _previousOfKey[r];
+                if (before < 0)
+                    continue;
+                int at = r * size, other = before * size;
+                for (int b = from; b < size; b++)
+                    if (b < key || b >= key + 4)
+                        rows[at + b] ^= rows[other + b];
+            }
+        }
+
         void CodeColumns(RowLayout layout, byte[] rows, int count)
         {
             int size = layout.rowSize;
             var isNumeric = NumericMask(layout);
+            // Keyed columns were coded against their key's previous row already.
+            int end = layout.keyedFrom >= 0 ? layout.keyedFrom : size;
 
             for (int r = count - 1; r > 0; r--)
             {
                 int at = r * size, prev = at - size;
-                for (int b = 0; b < size; b++)
+                for (int b = 0; b < end; b++)
                     if (!isNumeric[b])
                         rows[at + b] ^= rows[prev + b];
             }
 
             foreach (var c in layout.columns)
             {
+                if (c.offset >= end)
+                    continue;
                 if (c.size == 4 && IsWideNumeric(c.type))
                 {
                     uint prev = 0, prevDelta = 0;

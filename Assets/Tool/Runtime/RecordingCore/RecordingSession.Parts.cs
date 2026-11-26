@@ -237,12 +237,11 @@ namespace PurrNet.Recording
             string id = Hex(_offer.idA, _offer.idB);
             string token = Hex(_offer.tokenA, _offer.tokenB);
             ulong player = _offer.player.id.value;
-            string fileName = $"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Application.productName}-{id.Substring(0, 8)}-p{player}.purrrec";
-            foreach (char c in Path.GetInvalidFileNameChars())
-                fileName = fileName.Replace(c, '_');
+            string fileName = NewFileName();
 
             int tickRate = Mathf.Max(1, _context.tickRate);
-            _types = new RecordingTypeRegistry { onError = AddError, textFilter = _textFilter };
+            _types = new RecordingTypeRegistry { onError = AddError, textFilter = _textFilter, positionGrid = positionGrid };
+            _fileNumber++;
             _baseColumns.Clear();
             _file = _partFile = new RecordingFile(Path.Combine(ResolveDirectory(partDirectory), fileName),
                 (long)maxLocalMegabytes * 1024 * 1024, lastClosing);

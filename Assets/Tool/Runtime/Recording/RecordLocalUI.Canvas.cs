@@ -60,6 +60,8 @@ namespace PurrNet.Recording
         {
             _ = CanvasUpdateRegistry.instance;
             Canvas.willRenderCanvases += OnWillRenderCanvases;
+            UIContentSources.onChanged -= OnContentsChanged;
+            UIContentSources.onChanged += OnContentsChanged;
             try
             {
                 if (RegistryGraphics?.GetValue(GraphicRegistry.instance) is System.Collections.IDictionary graphics)
@@ -71,7 +73,11 @@ namespace PurrNet.Recording
             }
         }
 
-        void DisableCanvases() => Canvas.willRenderCanvases -= OnWillRenderCanvases;
+        void DisableCanvases()
+        {
+            Canvas.willRenderCanvases -= OnWillRenderCanvases;
+            UIContentSources.onChanged -= OnContentsChanged;
+        }
 
         void OnWillRenderCanvases()
         {
@@ -339,6 +345,9 @@ namespace PurrNet.Recording
             element.root = root;
 
             var sample = element.last;
+            // The last row's x and y may be relative to its parent; the capture works from the root.
+            sample.x = element.absX;
+            sample.y = element.absY;
             var flags = UIFlags.Visible;
             var rect = element.rect;
             Rect local = default;
@@ -415,6 +424,132 @@ namespace PurrNet.Recording
                 flags |= UIFlags.Redacted;
             sample.flags = flags;
             Commit(element, ref sample);
+            if (graphic is not null && (element.contents != null || UIContentSources.any))
+                SyncContents(element);
+        }
+
+        readonly List<Element> _contentOrder = new List<Element>(64);
+        readonly List<ulong> _contentGone = new List<ulong>(16);
+        int _contentsPass;
+
+        void OnContentsChanged(Graphic graphic)
+        {
+            if (graphic is not null && _byGraphic.TryGetValue(graphic, out var element))
+                Queue(element);
+        }
+
+        /// <summary>
+        /// The elements a graphic that draws a whole UI by itself showed, under it: one for each item of its latest
+        /// contents, placed within the graphic's rect, written when they change like any other element. Items that
+        /// are gone are removed.
+        /// </summary>
+        void SyncContents(Element host)
+        {
+            var contents = host.live ? UIContentSources.Read(host.graphic) : null;
+            if (contents == null)
+            {
+                HideContents(host);
+                return;
+            }
+            if (contents.version == host.contentsVersion)
+                return;
+            host.contentsVersion = contents.version;
+            host.contents ??= new Dictionary<ulong, Element>();
+            int seen = ++_contentsPass;
+            var items = contents.items;
+            _contentOrder.Clear();
+            for (int i = 0; i < items.Count; i++)
+            {
+                ulong id = items[i].id;
+                if (host.contents.TryGetValue(id, out var child))
+                {
+                    if (child.contentsSeen == seen)
+                    {
+                        // The same id twice in one frame: the second one is not recorded.
+                        _contentOrder.Add(null);
+                        continue;
+                    }
+                }
+                else
+                {
+                    child = new Element { id = _nextId++, owner = this };
+                    host.contents[id] = child;
+                }
+                child.contentsSeen = seen;
+                _contentOrder.Add(child);
+            }
+
+            float kx = contents.size.x > 0f ? host.last.width / contents.size.x : 0f;
+            float ky = contents.size.y > 0f ? host.last.height / contents.size.y : 0f;
+            var root = host.root ?? host;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var child = _contentOrder[i];
+                if (child == null)
+                    continue;
+                var item = items[i];
+                var parent = item.parent >= 0 && item.parent < i ? _contentOrder[item.parent] ?? host : host;
+                child.parent = parent;
+                child.root = root;
+                child.pass = _pass;
+
+                var sample = child.last;
+                sample.kind = item.kind;
+                sample.widget = item.widget;
+                sample.x = host.absX + item.rect.x * kx;
+                sample.y = host.absY + item.rect.y * ky;
+                sample.width = item.rect.width * kx;
+                sample.height = item.rect.height * ky;
+                sample.rotation = host.last.rotation + item.rotation;
+                sample.order = host.last.order;
+                var colour = ToColor(item.color, 1f);
+                sample.color = item.kind == UIKind.Text ? default : colour;
+                sample.textColor = item.kind == UIKind.Text ? colour : default;
+                sample.fontSize = item.fontSize * ky;
+                sample.align = default;
+                sample.fill = UIFill.None;
+                sample.fillOrigin = 0;
+                sample.fillAmount = 1f;
+                sample.value = item.value;
+                sample.worldPosition = default;
+                sample.worldRotation = default;
+                sample.worldSize = default;
+                sample.name = item.name;
+                sample.type = item.type;
+                sample.sprite = item.sprite;
+                var flags = UIFlags.Visible;
+                if (item.interactable)
+                    flags |= UIFlags.Interactable | UIFlags.Pickable;
+                bool redact = item.secret || (item.editable && _redactTextInput);
+                sample.text = redact ? null : item.text;
+                if (redact)
+                    flags |= UIFlags.Redacted;
+                sample.flags = flags;
+                Commit(child, ref sample);
+            }
+
+            _contentGone.Clear();
+            foreach (var pair in host.contents)
+                if (pair.Value.contentsSeen != seen)
+                    _contentGone.Add(pair.Key);
+            for (int i = 0; i < _contentGone.Count; i++)
+            {
+                Hide(host.contents[_contentGone[i]]);
+                host.contents.Remove(_contentGone[i]);
+            }
+        }
+
+        void HideContents(Element host)
+        {
+            var contents = host.contents;
+            if (contents == null || contents.Count == 0)
+                return;
+            host.contents = null;
+            foreach (var child in contents.Values)
+                Hide(child);
+            contents.Clear();
+            host.contents = contents;
+            host.contentsVersion = -1;
         }
 
         static Vector2 ToRoot(in Matrix4x4 toRoot, in Rect bounds, float x, float y)

@@ -390,6 +390,26 @@ namespace PurrNet.Recording
             capture.output = null;
         }
 
+        readonly RecordingBuffer _meshPacked = new RecordingBuffer(256);
+
+        /// <summary>A mesh written with the metadata, packed like the ones the writer packs (see MeshPacking).</summary>
+        unsafe void WritePackedMeshMeta(RecordingBuffer mesh)
+        {
+            var packed = _meshPacked;
+            packed.Clear();
+            packed.Ensure(MeshPacking.MaxBytes(mesh.length));
+            int length;
+            fixed (byte* source = mesh.data)
+            fixed (byte* target = packed.data)
+                length = MeshPacking.Pack(source, mesh.length, target);
+            if (length < 0)
+            {
+                WriteMeta(RecordKind.Mesh, mesh.data, mesh.length);
+                return;
+            }
+            WriteMeta(RecordKind.MeshPacked, packed.data, length);
+        }
+
         /// <summary>
         /// Meshes whose positions are stored in a way the copy job does not read (compressed formats): through the
         /// engine's own conversion, on the main thread. Rare.
@@ -431,7 +451,7 @@ namespace PurrNet.Recording
             }
             _meshVertices.Clear();
             _meshTriangles.Clear();
-            WriteMeta(RecordKind.Mesh, buffer.data, buffer.length);
+            WritePackedMeshMeta(buffer);
             return id;
         }
 
@@ -631,7 +651,10 @@ namespace PurrNet.Recording
             prefix.WriteFloat(size.x);
             prefix.WriteFloat(size.y);
             prefix.WriteFloat(size.z);
-            _file.EnqueueTerrain(prefix, heights, holes);
+            // The tolerance in the terrain's own height steps (its height range over 32766).
+            float stepSize = data.size.y / 32766f;
+            int tolerance = terrainTolerance > 0 && stepSize > 0 ? (int)Math.Min(1000f, terrainTolerance / stepSize) : 0;
+            _file.EnqueueTerrain(prefix, heights, holes, tolerance);
         }
 
         void CancelTerrainCapture(long key)

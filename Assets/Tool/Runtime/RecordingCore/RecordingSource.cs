@@ -80,6 +80,17 @@ namespace PurrNet.Recording
         public StreamRows transform;
         internal ulong poseTick;
         internal RecordedTransform lastPose;
+
+        /// <summary>The world pose read on <see cref="worldTick"/>, for the entities whose poses are relative to this one.</summary>
+        internal Vector3 worldPosition;
+        internal Quaternion worldRotation;
+        internal ulong worldTick = ulong.MaxValue;
+
+        /// <summary>The entity poses are relative to, found again when the Unity parent changes.</summary>
+        internal RecordedEntity frame;
+        internal Transform frameParent;
+        internal int frameId;
+        internal bool frameKnown;
         /// <summary>Its place among the transforms a job reads, and what was asked of that job for it.</summary>
         internal int jobIndex = -1;
         internal ulong laterTick;

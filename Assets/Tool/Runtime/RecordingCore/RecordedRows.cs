@@ -9,6 +9,14 @@ namespace PurrNet.Recording
         public Quaternion rotation;
         public Vector3 scale;
         public byte visible;
+
+        /// <summary>
+        /// The entity whose pose position and rotation are relative to (its nearest recorded ancestor), or 0 for the
+        /// world. A part riding on a vehicle then writes nothing while the vehicle drives: readers place it from the
+        /// vehicle's pose (world = frame position + frame rotation * position, frame rotation * rotation). Scale is
+        /// always the world scale.
+        /// </summary>
+        public int relativeTo;
     }
 
     public struct RecordedColliderPose

@@ -42,7 +42,12 @@ namespace PurrNet.Recording
         WorldSpace = 8,
         Redacted = 16,
         Snapshot = 32,
-        UIToolkit = 64
+        UIToolkit = 64,
+        /// <summary>
+        /// x and y are from the parent's x and y (as shown: the parent's own may be from its parent), not from the
+        /// root. A panel that slides or sways then writes one row, not one for every element in it.
+        /// </summary>
+        ParentRelative = 128
     }
 
     public enum UIAlign : byte
@@ -77,7 +82,7 @@ namespace PurrNet.Recording
         public UIKind kind;
         public UIWidget widget;
         public UIFlags flags;
-        public int id;
+        [RecordKey] public int id;
         public int parent;
         public int root;
         public int order;

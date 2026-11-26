@@ -97,7 +97,14 @@ namespace PurrNet.Recording
         public readonly Dictionary<string, string> labels;
 
         public float chunkSeconds = 10f;
-        public int maxLocalMegabytes = 1024;
+        public int maxLocalMegabytes = 256;
+
+        /// <summary>
+        /// How far, in units, a terrain height may be from the real one when it is written (0: exactly). Terrain is
+        /// smooth, and what is left of it after prediction is mostly the noise of rounding it to 16 bits: allowing a
+        /// few centimetres takes that out (5 cm makes terrain about a quarter smaller).
+        /// </summary>
+        public float terrainTolerance = 0.05f;
         public float colliderCheckBudgetMs = 0.1f;
         public int chunkBufferKilobytes = 2048;
         public ulong localTick => _context.isReady ? _context.localTick : 0;
@@ -133,6 +140,9 @@ namespace PurrNet.Recording
         static readonly ByteShelf Shelf = ByteShelf.shared;
         readonly Stack<MetaBatch> _metaPool = new Stack<MetaBatch>();
         readonly ChunkEncoder _encoder = new ChunkEncoder();
+
+        /// <summary>Counts the files this session wrote; chunks carry it so the encoder knows when a new file starts.</summary>
+        int _fileNumber;
         ChunkJob _job;
         readonly List<StreamRows> _slots = new List<StreamRows>();
 
@@ -317,9 +327,27 @@ namespace PurrNet.Recording
         /// <summary>Server only. Whether a connected player may be asked for a part of their own; null asks every player.</summary>
         public Func<PlayerID, bool> recordPlayer;
 
+        /// <summary>
+        /// Relative folders are under <see cref="Application.temporaryCachePath"/>: recordings wait there only until
+        /// they are sent, and the system may clear that folder; they are not the game's own data.
+        /// </summary>
         public static string ResolveDirectory(string directory) => Path.IsPathRooted(directory)
             ? directory
+            : Path.Combine(Application.temporaryCachePath, directory);
+
+        /// <summary>
+        /// Where relative folders were before they moved to the temporary folder. What earlier versions left there
+        /// is deleted (see RecordingUploader).
+        /// </summary>
+        public static string LegacyDirectory(string directory) => Path.IsPathRooted(directory)
+            ? null
             : Path.Combine(Application.persistentDataPath, directory);
+
+        /// <summary>
+        /// A random name, without the game's name or an extension: the file says nothing about what it is to
+        /// someone looking through the player's disk. Recordings are recognised by their first bytes (PURRREC).
+        /// </summary>
+        public static string NewFileName() => Guid.NewGuid().ToString("N");
 
         /// <summary>
         /// The id the pieces of one long recording share: the recordingId of its first piece. A recording that was
@@ -345,13 +373,14 @@ namespace PurrNet.Recording
             if (continues)
                 firstTick = Math.Max(firstTick, _lastTick + 1);
             directory = ResolveDirectory(directory);
-            fileName ??= $"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Application.productName}.purrrec";
+            fileName ??= NewFileName();
             if (piece > 0)
                 fileName = $"{Path.GetFileNameWithoutExtension(fileName)}-{piece + 1}{Path.GetExtension(fileName)}";
             foreach (char c in Path.GetInvalidFileNameChars())
                 fileName = fileName.Replace(c, '_');
 
-            _types = new RecordingTypeRegistry { onError = AddError, textFilter = _textFilter };
+            _types = new RecordingTypeRegistry { onError = AddError, textFilter = _textFilter, positionGrid = positionGrid };
+            _fileNumber++;
             _baseColumns.Clear();
             _file = new RecordingFile(Path.Combine(directory, fileName), (long)maxLocalMegabytes * 1024 * 1024, lastClosing);
             RaiseFileOpened(_file.path);
@@ -744,8 +773,13 @@ namespace PurrNet.Recording
             pose.scale = t.lossyScale;
             pose.visible = VisibleNow(entity);
             position = pose.position;
+            entity.worldPosition = pose.position;
+            entity.worldRotation = pose.rotation;
+            entity.worldTick = tick;
+            ToFrame(entity, tick, ref pose, true);
+            Snap(ref pose.position, ref pose.rotation, ref pose.scale);
             var rows = entity.transform;
-            if (rows.slot >= 0 && pose.visible == entity.lastPose.visible)
+            if (rows.slot >= 0 && pose.visible == entity.lastPose.visible && pose.relativeTo == entity.lastPose.relativeTo)
             {
                 fixed (RecordedTransform* last = &entity.lastPose)
                     if (UnsafeUtility.MemCmp(&pose, last, 40) == 0)
@@ -809,6 +843,10 @@ namespace PurrNet.Recording
 
         void ReleaseEntity(RecordedEntity entity)
         {
+            entity.frame = null;
+            entity.frameParent = null;
+            entity.frameKnown = false;
+            entity.worldTick = ulong.MaxValue;
 #if UNITY_PHYSICS_3D
             if (ReferenceEquals(_slice.entity, entity))
                 AbortSlice(false);
@@ -1269,6 +1307,7 @@ namespace PurrNet.Recording
                 _peakLogBytes = Math.Max(_peakLogBytes, log.bytes.length);
                 log.firstTick = _chunkFirstTick;
                 log.tickCount = _lastTick + 1 - _chunkFirstTick;
+                log.file = _fileNumber;
                 if (log.streams.Capacity < _slots.Count)
                     log.streams.Capacity = Mathf.NextPowerOfTwo(_slots.Count);
                 foreach (var s in _slots)
@@ -2259,6 +2298,9 @@ namespace PurrNet.Recording
                     rotation = local.ValidTRS() ? local.rotation : Quaternion.identity,
                     scale = local.lossyScale
                 };
+                // Rounded like transforms. The stream fills forward, so a pose that rounds to the last one costs
+                // nothing in the file: most colliders that count as moving only jitter by float noise.
+                Snap(ref pose.position, ref pose.rotation, ref pose.scale);
                 AppendRow(t.stream, tick, ref pose);
             }
         }

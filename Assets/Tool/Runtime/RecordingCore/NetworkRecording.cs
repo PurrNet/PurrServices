@@ -23,7 +23,7 @@ namespace PurrNet.Recording
         readonly GameObject _gameObject;
         NetworkManager _networkManager;
 
-        /// <summary>Folder for recordings. Relative paths are under Application.persistentDataPath.</summary>
+        /// <summary>Folder for recordings. Relative paths are under Application.temporaryCachePath.</summary>
         public string directory = "Recordings";
 
         /// <summary>Seconds of rows per chunk.</summary>
@@ -36,7 +36,7 @@ namespace PurrNet.Recording
         public float splitMinutes = 30f;
 
         /// <summary>Most a recording file may grow to, in megabytes.</summary>
-        public int maxLocalMegabytes = 1024;
+        public int maxLocalMegabytes = 256;
 
         /// <summary>Most time per tick, in milliseconds, spent checking objects for changes nothing announced.</summary>
         public float colliderCheckBudgetMs = 0.1f;
@@ -466,7 +466,7 @@ namespace PurrNet.Recording
             }
         }
 
-        /// <summary>Folder for the next recording. Relative paths are under Application.persistentDataPath.</summary>
+        /// <summary>Folder for the next recording. Relative paths are under Application.temporaryCachePath.</summary>
         public void SetDirectory(string value)
         {
             directory = value;

@@ -18,7 +18,8 @@ namespace PurrNet.Recording
     [AddComponentMenu("")]
     public sealed class RecordingUploader : MonoBehaviour
     {
-        const string Extension = ".purrrec";
+        /// <summary>Recordings written by earlier versions had it; new ones have no extension.</summary>
+        const string LegacyExtension = ".purrrec";
         const string SentMarker = ".sent";
         const string ClaimMarker = ".lock";
         const float RetryDelaySeconds = 60f;
@@ -29,6 +30,18 @@ namespace PurrNet.Recording
         static RecordingUploader _instance;
 
         public static bool runningOnCI => RecordingSession.runningOnCI;
+
+        /// <summary>
+        /// The most disk recordings that wait to be sent may take, whatever a recorder asks for. A player's disk is
+        /// theirs: a game that records for hours keeps only the newest.
+        /// </summary>
+        public const int MostLocalMegabytes = 512;
+
+        /// <summary>
+        /// Finished recordings kept on disk at most: one being sent and one waiting. Older ones are deleted when a
+        /// newer one finishes; the one being written does not count. Tests that keep many pieces raise it.
+        /// </summary>
+        internal static int mostWaitingFiles = 2;
 
         string _endpoint;
         string _projectKey;
@@ -80,6 +93,96 @@ namespace PurrNet.Recording
                 Configure(endpoint, key, RecordingSession.ResolveDirectory(directory), (long)maxLocalMegabytes * 1024 * 1024);
         }
 
+        static bool _legacyRemoved;
+
+        /// <summary>
+        /// Earlier versions kept recordings under <see cref="Application.persistentDataPath"/>, up to a gigabyte of
+        /// them. They are not sent from there any more, so they are deleted, once per run. Only files that start
+        /// like a recording (and their markers) are touched, and the folder only if nothing else is left in it.
+        /// </summary>
+        public static void RemoveLegacyRecordings(string directory)
+        {
+            if (_legacyRemoved || Application.isEditor || runningOnCI)
+                return;
+            _legacyRemoved = true;
+#if !PURRREC_WEB
+            try
+            {
+                string legacy = RecordingSession.LegacyDirectory(directory);
+                if (string.IsNullOrEmpty(legacy) || !Directory.Exists(legacy) ||
+                    string.Equals(Path.GetFullPath(legacy), Path.GetFullPath(RecordingSession.ResolveDirectory(directory)),
+                        StringComparison.OrdinalIgnoreCase))
+                    return;
+                foreach (var path in Directory.GetFiles(legacy))
+                {
+                    string name = Path.GetFileName(path);
+                    bool marker = name.EndsWith(SentMarker, StringComparison.OrdinalIgnoreCase) ||
+                                  name.EndsWith(ClaimMarker, StringComparison.OrdinalIgnoreCase);
+                    if (marker ? name.IndexOf(LegacyExtension, StringComparison.OrdinalIgnoreCase) >= 0 : IsRecordingFile(path))
+                        TryDelete(path);
+                }
+                if (Directory.GetFileSystemEntries(legacy).Length == 0)
+                    Directory.Delete(legacy);
+            }
+            catch (Exception)
+            {
+            }
+#endif
+        }
+
+        static readonly byte[] Magic = System.Text.Encoding.ASCII.GetBytes("PURRREC\0");
+
+        /// <summary>
+        /// A recording in the folder: no extension (or the one earlier versions used) and the PURRREC magic. Markers
+        /// and anything else someone put in the folder are left alone.
+        /// </summary>
+        internal static bool IsRecordingFile(string path)
+        {
+            string extension = Path.GetExtension(path);
+            if (extension.Length != 0 && !string.Equals(extension, LegacyExtension, StringComparison.OrdinalIgnoreCase))
+                return false;
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                var head = new byte[Magic.Length];
+                int read = 0;
+                while (read < head.Length)
+                {
+                    int got = stream.Read(head, read, head.Length - read);
+                    if (got <= 0)
+                        break;
+                    read += got;
+                }
+                // A file whose writer has only just created it may not have its first bytes yet.
+                if (read == 0)
+                    return true;
+                if (read < head.Length)
+                    return false;
+                for (int i = 0; i < head.Length; i++)
+                    if (head[i] != Magic[i])
+                        return false;
+                return true;
+            }
+            catch (Exception)
+            {
+                // Opened for writing by another process without sharing: a recording being written elsewhere is
+                // still found by name and left alone by the checks that look at whether it is being written.
+                return string.Equals(extension, LegacyExtension, StringComparison.OrdinalIgnoreCase) || extension.Length == 0;
+            }
+        }
+
+#if !PURRREC_WEB
+        /// <summary>The recordings in <paramref name="directory"/> (see <see cref="IsRecordingFile"/>).</summary>
+        static List<string> RecordingFiles(string directory)
+        {
+            var found = new List<string>();
+            foreach (var path in Directory.GetFiles(directory))
+                if (IsRecordingFile(path))
+                    found.Add(path);
+            return found;
+        }
+#endif
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Hook()
         {
@@ -110,7 +213,10 @@ namespace PurrNet.Recording
             _instance._endpoint = endpoint.TrimEnd('/');
             _instance._projectKey = projectKey;
             _instance._directory = directory;
-            _instance._maxLocalBytes = maxLocalBytes;
+            _instance._maxLocalBytes = maxLocalBytes > 0
+                ? Math.Min(maxLocalBytes, (long)MostLocalMegabytes * 1024 * 1024)
+                : (long)MostLocalMegabytes * 1024 * 1024;
+            maxLocalBytes = _instance._maxLocalBytes;
 #if PURRREC_WEB
             if (DataRegion.dataCollectionAllowed)
                 WebRecording.Uploads(_instance._endpoint, projectKey, maxLocalBytes);
@@ -222,6 +328,7 @@ namespace PurrNet.Recording
             }
 
             if (_blocked || Time.unscaledTime < _retryAt || (!idle && !serving) || string.IsNullOrEmpty(_projectKey) ||
+                !RecordingPermission.permits ||
                 (!dedicatedServer && !DataRegion.dataCollectionAllowed))
                 return;
 
@@ -279,13 +386,13 @@ namespace PurrNet.Recording
                 _uploadPath = null;
             }
 
-            foreach (var marker in Directory.GetFiles(_directory, "*" + Extension + SentMarker))
+            foreach (var marker in Directory.GetFiles(_directory, "*" + SentMarker))
                 if (!File.Exists(marker.Substring(0, marker.Length - SentMarker.Length)))
                     TryDelete(marker);
 
             string newest = null;
             DateTime newestTime = DateTime.MinValue;
-            foreach (var path in Directory.GetFiles(_directory, "*" + Extension))
+            foreach (var path in RecordingFiles(_directory))
             {
                 if (IsActive(path))
                     continue;
@@ -372,27 +479,36 @@ namespace PurrNet.Recording
 
             var files = new List<FileInfo>();
             long total = 0;
-            foreach (var path in Directory.GetFiles(_directory, "*" + Extension))
+            int waiting = 0;
+            foreach (var path in RecordingFiles(_directory))
             {
                 var info = new FileInfo(path);
                 total += info.Length;
-                if (!IsActive(path) && !string.Equals(info.FullName, _uploadPath, StringComparison.OrdinalIgnoreCase))
+                if (IsActive(path) || BeingWritten(info.FullName))
+                    continue;
+                waiting++;
+                if (!string.Equals(info.FullName, _uploadPath, StringComparison.OrdinalIgnoreCase))
                     files.Add(info);
             }
-            if (total <= _maxLocalBytes)
+            if (total <= _maxLocalBytes && waiting <= mostWaitingFiles)
                 return;
 
+            // Oldest first, and a client's part only once no recording of the server's is left to delete.
             files.Sort((a, b) => a.LastWriteTimeUtc.CompareTo(b.LastWriteTimeUtc));
-            for (int pass = 0; pass < 2 && total > _maxLocalBytes; pass++)
+            for (int pass = 0; pass < 2 && (total > _maxLocalBytes || waiting > mostWaitingFiles); pass++)
             {
-                for (int i = 0; i < files.Count && total > _maxLocalBytes; i++)
+                for (int i = 0; i < files.Count && (total > _maxLocalBytes || waiting > mostWaitingFiles); i++)
                 {
                     var file = files[i];
                     if (file == null || (pass == 0 && ReadLink(file.FullName).part))
                         continue;
                     long length = file.Length;
                     if (TryDelete(file.FullName))
+                    {
                         total -= length;
+                        waiting--;
+                        TryDelete(file.FullName + SentMarker);
+                    }
                     files[i] = null;
                 }
             }

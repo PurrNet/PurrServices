@@ -236,6 +236,9 @@ namespace PurrNet.Recording
                 RenumberPanels();
 
             var sample = element.last;
+            // The last row's x and y may be relative to its parent; the capture works from the root.
+            sample.x = element.absX;
+            sample.y = element.absY;
             var flags = UIFlags.UIToolkit;
             var root = element.root;
             sample.worldPosition = default;

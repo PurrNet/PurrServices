@@ -21,6 +21,14 @@ namespace PurrNet.Recording
         }
     }
 
+    /// <summary>
+    /// Marks an int field as what a stream's rows are about (an element, an object): rows of a stream with such a
+    /// field interleave many of them. In a chunk, the fields of the struct holding the key are then stored against
+    /// the previous row with the same key, not the row before (KEYED rows), which is what such rows repeat.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field)]
+    public sealed class RecordKeyAttribute : Attribute { }
+
     public sealed class RowLayout
     {
         public struct Column
@@ -30,6 +38,13 @@ namespace PurrNet.Recording
             public int offset;
             public int size;
             public Type enumType;
+
+            /// <summary>
+            /// For a float the recording rounds to a grid (poses): the grid, such as 1024 for 1/1024 of a unit. The
+            /// chunk stores such a column as the integer value * grid, which compresses far better than the float's
+            /// bits; readers turn it back into the same float. 0 for every other column.
+            /// </summary>
+            public float grid;
         }
 
         public struct Segment
@@ -53,6 +68,51 @@ namespace PurrNet.Recording
         public readonly List<ManagedField> managed = new List<ManagedField>();
 
         public bool hasManaged => managed.Count > 0;
+
+        /// <summary>Whether a column is stored on a grid (see <see cref="Column.grid"/>).</summary>
+        public bool hasGrid;
+
+        /// <summary>
+        /// The row offset of the <see cref="RecordKeyAttribute"/> column, or -1; and where the columns stored
+        /// against the same key's previous row start (those of the struct holding the key). Managed fields of a
+        /// keyed layout are compared with the same key's previous values too.
+        /// </summary>
+        public int keyOffset = -1, keyedFrom = -1;
+        public string keyName;
+
+        float[] _gridAt;
+        int _plainBytes = -1;
+
+        /// <summary>The bytes of a row that are not on a grid: what a block's byte planes hold.</summary>
+        internal int plainBytes
+        {
+            get
+            {
+                if (_plainBytes >= 0)
+                    return _plainBytes;
+                int bytes = rowSize;
+                foreach (var c in columns)
+                    if (c.grid > 0)
+                        bytes -= c.size;
+                return _plainBytes = bytes;
+            }
+        }
+
+        /// <summary>The grid of the column at each byte offset, 0 where there is none.</summary>
+        internal float[] gridAt
+        {
+            get
+            {
+                if (_gridAt != null)
+                    return _gridAt;
+                var at = new float[rowSize];
+                foreach (var c in columns)
+                    if (c.grid > 0)
+                        for (int i = 0; i < c.size; i++)
+                            at[c.offset + i] = c.grid;
+                return _gridAt = at;
+            }
+        }
         internal ManagedFieldWriter[] writers;
 
         public unsafe void WriteFixed<T>(ref T value, RecordingBuffer row) where T : struct
@@ -94,6 +154,12 @@ namespace PurrNet.Recording
 
         internal Action<string, string> onError;
 
+        /// <summary>
+        /// The grid poses are rounded to (<see cref="RecordingSession.positionGrid"/>): pose types declare their
+        /// columns on it, so they are stored as integers. 0 stores them as floats.
+        /// </summary>
+        public float positionGrid;
+
         readonly Dictionary<Type, RowLayout> _rows = new Dictionary<Type, RowLayout>();
         readonly Dictionary<Type, ObjectLayout> _objects = new Dictionary<Type, ObjectLayout>();
         readonly List<string> _pending = new List<string>();
@@ -116,6 +182,8 @@ namespace PurrNet.Recording
             layout = new RowLayout { id = _nextId++, type = type };
             Flatten(layout, type, "", 0, new List<FieldInfo>(), 0);
             MergeSegments(layout);
+            if (positionGrid > 0 && (type == typeof(RecordedTransform) || type == typeof(RecordedColliderPose)))
+                SetPoseGrids(layout, positionGrid);
             _rows[type] = layout;
             _pending.Add(DescribeRow(layout));
             return layout;
@@ -171,6 +239,7 @@ namespace PurrNet.Recording
 
         void Flatten(RowLayout layout, Type type, string prefix, int baseOffset, List<FieldInfo> path, int depth)
         {
+            int structStart = layout.rowSize;
             foreach (var field in type.GetFields(InstanceFields))
             {
                 var ft = field.FieldType;
@@ -187,6 +256,13 @@ namespace PurrNet.Recording
                 }
                 else if (TryScalar(ft, out scalar, out size))
                 {
+                    if (size == 4 && (scalar == "i32" || scalar == "u32") && layout.keyOffset < 0 &&
+                        field.IsDefined(typeof(RecordKeyAttribute), false))
+                    {
+                        layout.keyOffset = layout.rowSize;
+                        layout.keyedFrom = structStart;
+                        layout.keyName = name;
+                    }
                     AddColumn(layout, name, scalar, offset, size, null);
                 }
                 else if (ft.IsValueType && !IsCollection(ft) && depth < MaxDepth && !HasFixedBuffer(field))
@@ -207,6 +283,25 @@ namespace PurrNet.Recording
             layout.columns.Add(new RowLayout.Column { name = name, type = type, offset = layout.rowSize, size = size, enumType = enumType });
             layout.segments.Add(new RowLayout.Segment { source = offset, target = layout.rowSize, size = size });
             layout.rowSize += size;
+        }
+
+        /// <summary>The grids <see cref="RecordingSession"/> rounds poses to, on the matching columns.</summary>
+        static void SetPoseGrids(RowLayout layout, float positionGrid)
+        {
+            for (int i = 0; i < layout.columns.Count; i++)
+            {
+                var c = layout.columns[i];
+                if (c.type != "f32" || c.size != 4)
+                    continue;
+                c.grid = c.name.StartsWith("position.", StringComparison.Ordinal) ? positionGrid
+                    : c.name.StartsWith("rotation.", StringComparison.Ordinal) ? RecordingSession.RotationGrid
+                    : c.name.StartsWith("scale.", StringComparison.Ordinal) ? RecordingSession.ScaleGrid
+                    : 0f;
+                if (c.grid <= 0)
+                    continue;
+                layout.columns[i] = c;
+                layout.hasGrid = true;
+            }
         }
 
         static void MergeSegments(RowLayout layout)
@@ -234,11 +329,15 @@ namespace PurrNet.Recording
         {
             var json = new JsonBuilder().BeginObject()
                 .Prop("id", layout.id).Prop("kind", "row").Prop("name", TypeName(layout.type))
-                .Prop("rowSize", layout.rowSize)
-                .Key("columns").BeginArray();
+                .Prop("rowSize", layout.rowSize);
+            if (layout.keyOffset >= 0)
+                json.Key("key").BeginObject().Prop("column", layout.keyName).Prop("from", layout.keyedFrom).EndObject();
+            json.Key("columns").BeginArray();
             foreach (var c in layout.columns)
             {
                 json.BeginObject().Prop("name", c.name).Prop("type", c.type).Prop("offset", c.offset);
+                if (c.grid > 0)
+                    json.Prop("grid", c.grid);
                 if (c.enumType != null)
                 {
                     json.Prop("enum", TypeName(c.enumType)).Key("values").BeginObject();

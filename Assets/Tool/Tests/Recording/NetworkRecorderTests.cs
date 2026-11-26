@@ -646,6 +646,7 @@ public class NetworkRecorderTests
         string savedPrefs = PlayerPrefs.GetString(prefs, "");
         bool wasServer = RecordingUploader.dedicatedServer, wasSending = RecordingUploader.sendWhileServing;
         double wasShare = RecordingUploader.sendingShare;
+        int wasWaiting = RecordingUploader.mostWaitingFiles;
         var site = new FakeRecordingsSite();
         var random = new System.Random(7);
         var text = new StringBuilder();
@@ -664,6 +665,7 @@ public class NetworkRecorderTests
         try
         {
             RecordingUploader.Configure(site.endpoint, "test-key", directory, 1L << 30);
+            RecordingUploader.mostWaitingFiles = int.MaxValue;
             RecordingUploader.dedicatedServer = true;
             RecordingUploader.sendWhileServing = false;
             RecordingUploader.sendingShare = 0.5;
@@ -739,6 +741,7 @@ public class NetworkRecorderTests
             RecordingUploader.dedicatedServer = wasServer;
             RecordingUploader.sendWhileServing = wasSending;
             RecordingUploader.sendingShare = wasShare;
+            RecordingUploader.mostWaitingFiles = wasWaiting;
             foreach (var uploader in Resources.FindObjectsOfTypeAll<RecordingUploader>())
                 Object.DestroyImmediate(uploader.gameObject);
             if (string.IsNullOrEmpty(savedPrefs))
@@ -1945,6 +1948,8 @@ public class NetworkRecorderTests
                 Read(payload, 0, payload.Length, into, terrainRecords, materialRecords);
             else if (k == RecordKind.Terrain)
                 terrainRecords?.Add(payload);
+            else if (k == RecordKind.TerrainHeights)
+                terrainRecords?.Add(TerrainHeightsTests.UnpackTerrainHeights(payload));
             else if (k == RecordKind.TerrainMaterials)
                 materialRecords?.Add(payload);
             else if (k != RecordKind.Chunk && k != RecordKind.Mesh)

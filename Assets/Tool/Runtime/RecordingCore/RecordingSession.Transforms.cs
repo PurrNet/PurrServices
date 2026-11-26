@@ -24,6 +24,104 @@ namespace PurrNet.Recording
         public long transformsReadByJob { get; private set; }
 
         /// <summary>
+        /// Poses are rounded before they are compared and written: positions to 1/<see cref="positionGrid"/> of a
+        /// unit (1/1024 by default, about a millimetre), rotations to 1/16384 per quaternion component, scales to
+        /// 1/8192. A body at rest whose physics jitters by a fraction of a millimetre then writes nothing, and the
+        /// rows that do change compress much better: in recordings of a large game most transform rows were such
+        /// jitter. The grids are powers of two, so every rounded value is exact in a float. 0 writes poses exactly.
+        /// </summary>
+        public float positionGrid = DefaultPositionGrid;
+
+        public const float DefaultPositionGrid = 1024f;
+        internal const float RotationGrid = 16384f, ScaleGrid = 8192f;
+
+        /// <summary>The power of two nearest to one over <paramref name="precision"/> (in units), or 0 for exact poses.</summary>
+        public static float GridFor(float precision) =>
+            precision > 0 ? Mathf.Pow(2f, Mathf.Clamp(Mathf.Round(-Mathf.Log(precision, 2f)), -8f, 20f)) : 0f;
+
+        void Snap(ref Vector3 position, ref Quaternion rotation, ref Vector3 scale)
+        {
+            float grid = positionGrid;
+            if (!(grid > 0))
+                return;
+            position = new Vector3(Snap(position.x, grid), Snap(position.y, grid), Snap(position.z, grid));
+            rotation = new Quaternion(Snap(rotation.x, RotationGrid), Snap(rotation.y, RotationGrid),
+                Snap(rotation.z, RotationGrid), Snap(rotation.w, RotationGrid));
+            scale = new Vector3(Snap(scale.x, ScaleGrid), Snap(scale.y, ScaleGrid), Snap(scale.z, ScaleGrid));
+        }
+
+        /// <summary>
+        /// Makes the pose relative to the entity's frame (its nearest recorded ancestor) as that was on
+        /// <paramref name="tick"/>: read then (<see cref="RecordedEntity.worldTick"/>), or now when
+        /// <paramref name="now"/> says this is still that tick on the main thread. Without a frame, or with exact
+        /// poses (no grid), the pose stays in the world.
+        /// </summary>
+        void ToFrame(RecordedEntity entity, ulong tick, ref RecordedTransform pose, bool now)
+        {
+            pose.relativeTo = 0;
+            if (!(positionGrid > 0))
+                return;
+            var frame = FrameOf(entity);
+            if (frame == null)
+                return;
+            Vector3 at;
+            Quaternion turn;
+            if (frame.worldTick == tick)
+            {
+                at = frame.worldPosition;
+                turn = frame.worldRotation;
+            }
+            else if (now && frame.root)
+                frame.root.GetPositionAndRotation(out at, out turn);
+            else
+                return;
+            var inverse = Quaternion.Inverse(turn);
+            var position = inverse * (pose.position - at);
+            // Far from its frame the frame's rounded rotation would move it by more than the grid (1/16384 of a turn
+            // is about 2 mm at 16 m): such an entity (under a manager object, say) stays in the world.
+            if (position.sqrMagnitude > MaxRelativeDistance * MaxRelativeDistance)
+                return;
+            pose.position = position;
+            pose.rotation = inverse * pose.rotation;
+            pose.relativeTo = frame.id;
+        }
+
+        /// <summary>How far from its frame an entity's pose may be relative to it, in units.</summary>
+        internal const float MaxRelativeDistance = 16f;
+
+        /// <summary>
+        /// The nearest recorded entity above this one, while it is recorded; looked for again only when the Unity
+        /// parent changes (or the entity it was is gone: entities are reused).
+        /// </summary>
+        RecordedEntity FrameOf(RecordedEntity entity)
+        {
+            var root = entity.root;
+            if (!root)
+                return null;
+            var up = root.parent;
+            if (!entity.frameKnown || !ReferenceEquals(up, entity.frameParent) ||
+                (entity.frame != null && entity.frame.id != entity.frameId))
+            {
+                entity.frameKnown = true;
+                entity.frameParent = up;
+                entity.frame = up ? ParentEntity(up, true) : null;
+                entity.frameId = entity.frame?.id ?? 0;
+            }
+            var frame = entity.frame;
+            if (frame == null || ReferenceEquals(frame, entity) || frame.transform == null ||
+                !_entitiesByGameObject.TryGetValue(frame.gameObjectId, out var current) || !ReferenceEquals(current, frame))
+                return null;
+            return frame;
+        }
+
+        /// <summary>
+        /// Rounded to the grid; beyond 2^24 / grid every float already is on it (and NaN stays NaN). Adding 0 turns
+        /// -0 into 0, so a value that crosses zero and back is the same bits.
+        /// </summary>
+        static float Snap(float value, float grid) =>
+            Math.Abs(value) < 16777216f / grid ? (float)Math.Round(value * grid) / grid + 0f : value;
+
+        /// <summary>
         /// The job cannot read a transform's world scale. It reads the world matrix, whose axes change length when
         /// the scale does: while they keep the length they had when the scale was last read on the main thread, the
         /// scale is that one. When they change, that tick's scale is worked out from how much they changed, and the
@@ -244,6 +342,16 @@ namespace PurrNet.Recording
             _stats.Begin(_statPoses);
             int start = _job.log.bytes.length;
             ulong tick = _jobTick;
+            // Every pose the job read first: an entity's pose is relative to its frame's on the same tick.
+            for (int i = 0; i < _jobCount; i++)
+            {
+                var read = _jobEntities[i];
+                if (read.laterTick != tick || _jobAlive[i] == 0)
+                    continue;
+                read.worldPosition = _jobPositions[i];
+                read.worldRotation = _jobRotations[i];
+                read.worldTick = tick;
+            }
             for (int i = 0; i < _jobCount; i++)
             {
                 var entity = _jobEntities[i];
@@ -277,7 +385,9 @@ namespace PurrNet.Recording
                     AddError("transform_job_mismatch", $"entity {entity.id} on tick {tick}: {pose.position:R} {pose.rotation:R} read by the job, {_checkPositions[i]:R} {_checkRotations[i]:R} by the main thread");
 
                 transformsReadByJob++;
-                if (rows.slot >= 0 && pose.visible == entity.lastPose.visible)
+                ToFrame(entity, tick, ref pose, false);
+                Snap(ref pose.position, ref pose.rotation, ref pose.scale);
+                if (rows.slot >= 0 && pose.visible == entity.lastPose.visible && pose.relativeTo == entity.lastPose.relativeTo)
                 {
                     fixed (RecordedTransform* last = &entity.lastPose)
                         if (UnsafeUtility.MemCmp(&pose, last, 40) == 0)
