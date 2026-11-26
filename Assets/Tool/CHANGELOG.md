@@ -1,3 +1,10 @@
+# [1.3.0-beta.7](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.6...v1.3.0-beta.7) (2026-11-26)
+
+
+### Performance Improvements
+
+* optimize packing ([5fcfe41](https://github.com/PurrNet/PurrServices/commit/5fcfe417c02a799de1ed82d7b2e7e8d7a3a33199))
+
 # [1.3.0-beta.6](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.5...v1.3.0-beta.6) (2026-11-25)
 
 
