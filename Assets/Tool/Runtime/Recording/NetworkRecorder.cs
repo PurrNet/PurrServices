@@ -199,7 +199,7 @@ namespace PurrNet.Recording
             r.session.recordLocalPlayer = DataRegion.dataCollectionAllowed && permitted;
             r.session.positionGrid = RecordingSession.GridFor(_positionPrecision);
             r.session.terrainTolerance = _terrainTolerance;
-            r.session.recordPlayer ??= player => DataRegion.IsAllowedFor(r.networkManager, player);
+            r.session.recordPlayer ??= player => RecordingConsent.IsAllowedFor(r.networkManager, player);
             r.directory = _directory;
             r.chunkSeconds = _chunkSeconds;
             r.splitMinutes = _splitMinutes;

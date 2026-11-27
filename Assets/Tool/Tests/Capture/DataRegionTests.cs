@@ -44,4 +44,21 @@ public class DataRegionTests
         DataRegion.overrideRestricted = false;
         Assert.That(DataRegion.isRestricted, Is.False);
     }
+
+    [TestCase("1", false)]
+    [TestCase(" TRUE ", false)]
+    [TestCase("on", false)]
+    [TestCase("yes", false)]
+    [TestCase("0", true)]
+    [TestCase("false", true)]
+    [TestCase("Off", true)]
+    [TestCase("no", true)]
+    public void TheEnvironmentVariableDecidesForAMachine(string value, bool restricted) =>
+        Assert.That(DataRegion.ParseEnvironment(value), Is.EqualTo(restricted), value);
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("maybe")]
+    public void AnEnvironmentVariableThatSaysNothingLeavesItToTheDevice(string value) =>
+        Assert.That(DataRegion.ParseEnvironment(value), Is.Null);
 }

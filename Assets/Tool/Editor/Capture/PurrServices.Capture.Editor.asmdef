@@ -1,0 +1,43 @@
+{
+    "name": "PurrServices.Capture.Editor",
+    "rootNamespace": "PurrNet.Services.Editor",
+    "references": [
+        "PurrNet.Runtime",
+        "PurrServices.Runtime",
+        "PurrServices.Capture"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "PURRNET_RELAY_SIGN_IN"
+    ],
+    "versionDefines": [
+        {
+            "name": "dev.purrnet.purrnet",
+            "expression": "1.26.0-beta.48",
+            "define": "PURRNET_RELAY_SIGN_IN"
+        },
+        {
+            "name": "com.unity.modules.physics",
+            "expression": "",
+            "define": "UNITY_PHYSICS_3D"
+        },
+        {
+            "name": "com.unity.modules.physics2d",
+            "expression": "",
+            "define": "UNITY_PHYSICS_2D"
+        },
+        {
+            "name": "com.unity.modules.terrainphysics",
+            "expression": "",
+            "define": "PURRNET_TERRAIN"
+        }
+    ],
+    "noEngineReferences": false
+}

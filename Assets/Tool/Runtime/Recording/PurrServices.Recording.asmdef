@@ -3,6 +3,7 @@
     "rootNamespace": "PurrNet.Recording",
     "references": [
         "PurrNet.Runtime",
+        "PurrServices.Capture",
         "Unity.InputSystem",
         "UnityEngine.UI",
         "Unity.TextMeshPro"
@@ -14,14 +15,9 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [
-        "!PURRNET_RECORDING_LEGACY"
+        "PURRNET_RECORDING_ENABLED"
     ],
     "versionDefines": [
-        {
-            "name": "dev.purrnet.purrnet",
-            "expression": "[0.0.0,1.26.0-beta.43)",
-            "define": "PURRNET_RECORDING_LEGACY"
-        },
         {
             "name": "com.unity.inputsystem",
             "expression": "",

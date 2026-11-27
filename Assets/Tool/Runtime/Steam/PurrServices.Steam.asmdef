@@ -4,7 +4,8 @@
     "references": [
         "GUID:1de6d4b8537cdd546bff9f1e4c45a4c8",
         "GUID:68bd7fdb68ef2684e982e8a9825b18a5",
-        "GUID:50ff7354a8674181a25ca29f2b8b8edf"
+        "GUID:50ff7354a8674181a25ca29f2b8b8edf",
+        "GUID:c4b7e0d2a91f4c3e8d5a6b7f90123e4a"
     ],
     "includePlatforms": [
         "Editor",
@@ -29,8 +30,8 @@
         },
         {
             "name": "dev.purrnet.purrnet",
-            "expression": "[0.0.0,1.26.0-beta.43)",
-            "define": "PURRNET_RECORDING_LEGACY"
+            "expression": "1.26.0-beta.48",
+            "define": "PURRNET_RELAY_SIGN_IN"
         }
     ],
     "noEngineReferences": false

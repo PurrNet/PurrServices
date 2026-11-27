@@ -5,6 +5,7 @@
         "PurrNet.Runtime",
         "PurrNet.Essentials.Runtime",
         "PurrServices.Recording",
+        "PurrServices.Capture",
         "PurrServices.Runtime",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
@@ -23,14 +24,9 @@
     "autoReferenced": false,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS",
-        "!PURRNET_RECORDING_LEGACY"
+        "PURRNET_RECORDING_ENABLED"
     ],
     "versionDefines": [
-        {
-            "name": "dev.purrnet.purrnet",
-            "expression": "[0.0.0,1.26.0-beta.43)",
-            "define": "PURRNET_RECORDING_LEGACY"
-        },
         {
             "name": "com.unity.modules.physics",
             "expression": "",

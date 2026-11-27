@@ -4,8 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using PurrNet.Modules;
-using PurrNet.Recording;
+using PurrNet.Services.Capture;
 using UnityEngine;
 #if PURRNET_WEB_REGION
 using System.Runtime.InteropServices;
@@ -19,6 +18,11 @@ namespace PurrNet.Services
     /// region setting and the country sources added with <see cref="AddCountrySource"/> (PurrServices.Steam adds Steam's
     /// country): nothing is sent anywhere to find out. A device is restricted when any of them points at such a
     /// country, and when none of them says where it is.
+    /// <para>
+    /// A person can decide for their own machine with the <see cref="EnvironmentVariable"/> environment variable:
+    /// <c>1</c> allows gathering there whatever the region, <c>0</c> never allows it. A game decides for its players
+    /// with <see cref="overrideRestricted"/>, which comes first.
+    /// </para>
     /// </summary>
     public static class DataRegion
     {
@@ -54,25 +58,38 @@ namespace PurrNet.Services
         static readonly List<Func<string>> CountrySources = new List<Func<string>>();
 
         /// <summary>
-        /// Recordings made in the editor and on CI machines are never sent, so where their players are does not keep
+        /// Nothing made in the editor or on a CI machine is ever sent, so where their players are does not keep
         /// them off. Tests turn it off to see what a build does.
         /// </summary>
-        internal static bool ignoreInEditorAndCI = Application.isEditor || RecordingSession.runningOnCI;
-
-        const string ConnectionKey = "purrservices.dataCollection";
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void Register() => AuthModule.SetConnectionData(ConnectionKey, () => dataCollectionAllowed ? "1" : "0");
+        internal static bool ignoreInEditorAndCI = Application.isEditor || CaptureEnvironment.runningOnCI;
 
         /// <summary>Whether data about this machine's own player may be gathered.</summary>
         public static bool dataCollectionAllowed => ignoreInEditorAndCI || !isRestricted;
 
-        /// <summary>Server only. Whether the client of <paramref name="player"/> said data about its player may be gathered.</summary>
-        public static bool IsAllowedFor(NetworkManager manager, PlayerID player) =>
-            manager && manager.TryGetModule<AuthModule>(true, out var auth) &&
-            manager.TryGetModule<PlayersManager>(true, out var players) &&
-            players.TryGetConnection(player, out var conn) &&
-            auth.TryGetConnectionData(conn, ConnectionKey, out var value) && value == "1";
+        /// <summary>The environment variable a person sets to decide for their own machine: 1 allows, 0 forbids.</summary>
+        public const string EnvironmentVariable = "PURRSERVICES_DATA_COLLECTION";
+
+        static readonly bool? EnvironmentRestricted = ParseEnvironment(Read(() => Environment.GetEnvironmentVariable(EnvironmentVariable)));
+
+        /// <summary>What a value of <see cref="EnvironmentVariable"/> means for <see cref="isRestricted"/>; null when it says nothing.</summary>
+        internal static bool? ParseEnvironment(string value)
+        {
+            switch (value?.Trim().ToLowerInvariant())
+            {
+                case "1":
+                case "true":
+                case "on":
+                case "yes":
+                    return false;
+                case "0":
+                case "false":
+                case "off":
+                case "no":
+                    return true;
+                default:
+                    return null;
+            }
+        }
 
         static bool _checked;
         static bool _restricted;
@@ -91,6 +108,8 @@ namespace PurrNet.Services
             {
                 if (overrideRestricted.HasValue)
                     return overrideRestricted.Value;
+                if (EnvironmentRestricted.HasValue)
+                    return EnvironmentRestricted.Value;
 
                 int now = Environment.TickCount;
                 if (!_checked || unchecked(now - _checkedAt) > RefreshMs)
