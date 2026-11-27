@@ -1,3 +1,10 @@
+# [1.3.0-beta.8](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.7...v1.3.0-beta.8) (2026-11-27)
+
+
+### Bug Fixes
+
+* sync with PurrServices ([95a6f66](https://github.com/PurrNet/PurrServices/commit/95a6f6693df237cacc972f94be58f25aa2d76565))
+
 # [1.3.0-beta.7](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.6...v1.3.0-beta.7) (2026-11-26)
 
 
