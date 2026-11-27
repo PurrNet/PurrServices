@@ -33,7 +33,7 @@ namespace PurrNet.Services.Editor.Capture
         public readonly Dictionary<string, (string kind, byte[] data)> blobs =
             new Dictionary<string, (string kind, byte[] data)>();
 
-        readonly Dictionary<int, string> _meshHashes = new Dictionary<int, string>();
+        readonly Dictionary<UnityEngine.Object, string> _meshHashes = new Dictionary<UnityEngine.Object, string>();
         readonly List<NetworkIdentity> _identities = new List<NetworkIdentity>();
         readonly List<Component> _components = new List<Component>();
 
@@ -335,7 +335,7 @@ namespace PurrNet.Services.Editor.Capture
         /// </summary>
         string MeshBlob(Mesh mesh)
         {
-            int id = mesh.GetInstanceID();
+            UnityEngine.Object id = mesh;
             if (_meshHashes.TryGetValue(id, out string known))
                 return known;
 
@@ -386,7 +386,7 @@ namespace PurrNet.Services.Editor.Capture
         /// </summary>
         string TerrainBlob(TerrainData data)
         {
-            int id = data.GetInstanceID();
+            UnityEngine.Object id = data;
             if (_meshHashes.TryGetValue(id, out string known))
                 return known;
 

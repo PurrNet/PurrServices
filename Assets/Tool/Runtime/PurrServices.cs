@@ -54,12 +54,15 @@ namespace PurrNet.Services
         AuthService _auth;
         LobbyService _lobbies;
         MatchmakingService _matchmaking;
+        DataSharingService _dataSharing;
 
         readonly List<LobbyConnection> _connections = new();
 
         public AuthService auth => _auth;
         public LobbyService lobbies => _lobbies;
         public MatchmakingService matchmaking => _matchmaking;
+        /// <summary>Whether this project shares anonymous data with PurrNet; ask before recording.</summary>
+        public DataSharingService dataSharing => _dataSharing;
         public bool isAuthenticated => _auth != null && _auth.isAuthenticated;
         public string sessionToken => _auth?.sessionToken;
         public string playerId => _auth?.playerId;
@@ -117,6 +120,7 @@ namespace PurrNet.Services
 
             _auth = new AuthService(_http);
             _matchmaking = new MatchmakingService(_http);
+            _dataSharing = new DataSharingService(_http);
 
             _lobbies = new LobbyService(
                 _http,
