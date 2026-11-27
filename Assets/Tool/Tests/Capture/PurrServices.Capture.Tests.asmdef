@@ -1,0 +1,31 @@
+{
+    "name": "PurrServices.Capture.Tests",
+    "rootNamespace": "",
+    "references": [
+        "PurrServices.Capture",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "PURRNET_RELAY_SIGN_IN"
+    ],
+    "versionDefines": [
+        {
+            "name": "dev.purrnet.purrnet",
+            "expression": "1.26.0-beta.48",
+            "define": "PURRNET_RELAY_SIGN_IN"
+        }
+    ],
+    "noEngineReferences": false
+}

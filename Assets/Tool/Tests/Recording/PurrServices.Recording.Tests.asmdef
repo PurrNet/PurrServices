@@ -1,0 +1,57 @@
+{
+    "name": "PurrServices.Recording.Tests",
+    "rootNamespace": "",
+    "references": [
+        "PurrNet.Runtime",
+        "PurrNet.Essentials.Runtime",
+        "PurrServices.Recording",
+        "PurrServices.Capture",
+        "PurrServices.Runtime",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "Unity.Collections",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "PURRNET_RECORDING_ENABLED"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.modules.physics",
+            "expression": "",
+            "define": "UNITY_PHYSICS_3D"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "",
+            "define": "PURRNET_UGUI"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "PURRNET_TMP"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "PURRNET_TMP"
+        },
+        {
+            "name": "com.unity.modules.uielements",
+            "expression": "",
+            "define": "PURRNET_UITK"
+        }
+    ],
+    "noEngineReferences": false
+}

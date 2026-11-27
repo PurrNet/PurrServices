@@ -1,0 +1,58 @@
+{
+    "name": "PurrServices.Capture",
+    "rootNamespace": "PurrNet.Services",
+    "references": [
+        "PurrNet.Runtime",
+        "PurrServices.Runtime",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "PURRNET_RELAY_SIGN_IN"
+    ],
+    "versionDefines": [
+        {
+            "name": "dev.purrnet.purrnet",
+            "expression": "1.26.0-beta.48",
+            "define": "PURRNET_RELAY_SIGN_IN"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "PURRNET_INPUT_SYSTEM"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "",
+            "define": "PURRNET_UGUI"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "PURRNET_TMP"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "PURRNET_TMP"
+        },
+        {
+            "name": "com.unity.modules.uielements",
+            "expression": "",
+            "define": "PURRNET_UITK"
+        },
+        {
+            "name": "com.unity.modules.imgui",
+            "expression": "",
+            "define": "PURRNET_IMGUI"
+        }
+    ],
+    "noEngineReferences": false
+}

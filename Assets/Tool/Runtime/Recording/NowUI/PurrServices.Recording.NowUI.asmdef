@@ -1,0 +1,34 @@
+{
+    "name": "PurrServices.Recording.NowUI",
+    "rootNamespace": "PurrNet.Recording",
+    "references": [
+        "PurrServices.Recording",
+        "NowUI.Runtime",
+        "PurrNet.Runtime",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "PURRNET_NOWUI",
+        "PURRNET_UGUI",
+        "PURRNET_RECORDING_ENABLED"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.blenminer.nowui",
+            "expression": "1.24.0",
+            "define": "PURRNET_NOWUI"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "",
+            "define": "PURRNET_UGUI"
+        }
+    ],
+    "noEngineReferences": false
+}

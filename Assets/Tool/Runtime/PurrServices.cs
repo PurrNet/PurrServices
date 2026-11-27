@@ -53,11 +53,13 @@ namespace PurrNet.Services
         ServiceHttp _http;
         AuthService _auth;
         LobbyService _lobbies;
+        MatchmakingService _matchmaking;
 
         readonly List<LobbyConnection> _connections = new();
 
         public AuthService auth => _auth;
         public LobbyService lobbies => _lobbies;
+        public MatchmakingService matchmaking => _matchmaking;
         public bool isAuthenticated => _auth != null && _auth.isAuthenticated;
         public string sessionToken => _auth?.sessionToken;
         public string playerId => _auth?.playerId;
@@ -114,6 +116,7 @@ namespace PurrNet.Services
             );
 
             _auth = new AuthService(_http);
+            _matchmaking = new MatchmakingService(_http);
 
             _lobbies = new LobbyService(
                 _http,
