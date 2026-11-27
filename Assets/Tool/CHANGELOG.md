@@ -1,3 +1,10 @@
+## [1.3.1-beta.1](https://github.com/PurrNet/PurrServices/compare/v1.3.0...v1.3.1-beta.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* GetInstanceID unity editor shit ([6debe99](https://github.com/PurrNet/PurrServices/commit/6debe993466c5a7502d18bb2cef9326a21bf79e6))
+
 # [1.3.0](https://github.com/PurrNet/PurrServices/compare/v1.2.1...v1.3.0) (2026-11-27)
 
 
