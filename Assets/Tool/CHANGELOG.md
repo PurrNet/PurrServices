@@ -1,3 +1,26 @@
+# [1.3.0](https://github.com/PurrNet/PurrServices/compare/v1.2.1...v1.3.0) (2026-11-27)
+
+
+### Bug Fixes
+
+* migrate purrnet match service ([a28e3c8](https://github.com/PurrNet/PurrServices/commit/a28e3c863c4423a54d72d2355e1f20378712da77))
+* sync with PurrServices ([95a6f66](https://github.com/PurrNet/PurrServices/commit/95a6f6693df237cacc972f94be58f25aa2d76565))
+* undo steam unauth thing; bad move ([3f7f290](https://github.com/PurrNet/PurrServices/commit/3f7f290f05ee8cabb99cec4a28f58cfece9dbd79))
+
+
+### Features
+
+* add competitive matchmaking SDK ([23af6cf](https://github.com/PurrNet/PurrServices/commit/23af6cf73a128402152e4e4296a9ea30074a03d3))
+* casual and competitive matchmaking queue types ([b528313](https://github.com/PurrNet/PurrServices/commit/b5283131e3ea87c242be42c64b0ee644791c87a2))
+* matchmaking matches with any number of teams ([1a18920](https://github.com/PurrNet/PurrServices/commit/1a189208330527d223460bcabdc7ef7900eef4bf))
+* matchmaking queue aliases for redirected queue IDs ([0095a6c](https://github.com/PurrNet/PurrServices/commit/0095a6c4ec8b7b72e32fe5f04257dad8dc5a69de))
+* relaxing latency limit settings for matchmaking queues ([ca8d16e](https://github.com/PurrNet/PurrServices/commit/ca8d16e2f7f0f90cc40f03c8042377953a808aa9))
+
+
+### Performance Improvements
+
+* optimize packing ([5fcfe41](https://github.com/PurrNet/PurrServices/commit/5fcfe417c02a799de1ed82d7b2e7e8d7a3a33199))
+
 # [1.3.0-beta.8](https://github.com/PurrNet/PurrServices/compare/v1.3.0-beta.7...v1.3.0-beta.8) (2026-11-27)
 
 
